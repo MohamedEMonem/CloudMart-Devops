@@ -4,7 +4,7 @@ This project automates e-commerce microservices deployment using Docker and Kube
 ## Team Members
 - Mohamed Essam
 - Marwan Sheriff
-- Habeaba Ehab
+- Habeba Ehab
 - Youssef Ahmed
 - Tahany Edress
 - Mahmoud Adel
