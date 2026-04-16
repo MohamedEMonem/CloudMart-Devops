@@ -1,0 +1,81 @@
+# ============================================================
+#  CloudMart — Full-Stack E-Commerce Project
+#  Dependency Manifest  (for Docker / DevOps reference)
+# ============================================================
+#
+#  This project is a Node.js / React application.
+#  Dependencies are managed via npm using the package.json files
+#  located in /frontend and /backend.
+#
+#  For Docker: run `npm ci` (not `npm install`) inside each
+#  service image to get a clean, reproducible install.
+#
+# ============================================================
+
+# ── SYSTEM / RUNTIME REQUIREMENTS ────────────────────────────
+#
+#  Node.js  >= 18.0.0  (LTS "Hydrogen" or later)
+#            Vite 5 requires Node 18+; use the official
+#            node:18-alpine image in Dockerfiles.
+#
+#  npm      >= 9.0.0   (bundled with Node 18)
+#  Docker   >= 24.0    (for multi-stage builds)
+#  Docker Compose >= 2.20
+
+# ── BACKEND  (c:/depi_project/backend/package.json) ──────────
+#
+#  Runtime dependencies:
+#    express            ^4.18.2   — HTTP server & routing framework
+#    cors               ^2.8.5    — Cross-Origin Resource Sharing middleware
+#
+#  Dev / tooling dependencies (not installed in production image):
+#    nodemon            ^3.0.1    — auto-restart on file change (dev only)
+
+# ── FRONTEND  (c:/depi_project/frontend/package.json) ────────
+#
+#  Runtime dependencies (bundled by Vite at build time):
+#    react              ^18.2.0   — UI library
+#    react-dom          ^18.2.0   — React DOM renderer
+#    react-router-dom   ^6.21.1   — Client-side routing (BrowserRouter)
+#    axios              ^1.6.2    — HTTP client (API calls to backend)
+#
+#  Build / dev dependencies (only needed during `npm run build`):
+#    vite               ^5.0.8    — Build tool & dev server
+#    @vitejs/plugin-react ^4.2.1  — React Fast Refresh + JSX transform
+#    tailwindcss        ^3.4.0    — Utility-first CSS framework
+#    autoprefixer       ^10.4.16  — PostCSS vendor-prefix plugin
+#    postcss            ^8.4.32   — CSS transformation pipeline
+#    @types/react       ^18.2.43  — TypeScript types (optional, for IDE)
+#    @types/react-dom   ^18.2.17  — TypeScript types (optional, for IDE)
+
+# ── PORTS ─────────────────────────────────────────────────────
+#
+#  Backend  API  → 5000  (Express server)
+#  Frontend Dev  → 5173  (Vite dev server, mapped to 80 in prod)
+#  Frontend Prod → 80    (Nginx serves the Vite build output)
+
+# ── ENVIRONMENT VARIABLES ─────────────────────────────────────
+#
+#  Backend:
+#    PORT=5000                     (default, can be overridden)
+#    NODE_ENV=production           (set in Docker prod image)
+#
+#  Frontend (Vite build-time):
+#    VITE_API_URL=http://backend:5000   (backend service URL inside Docker network)
+#    NODE_ENV=production
+
+# ── INSTALL COMMANDS (per service) ────────────────────────────
+#
+#  Backend:
+#    npm ci --omit=dev             (production — skips nodemon)
+#    npm ci                        (development — includes nodemon)
+#
+#  Frontend build:
+#    npm ci                        (install all deps including devDeps)
+#    npm run build                 (outputs static files to /dist)
+
+# ── DOCKER IMAGES RECOMMENDED ─────────────────────────────────
+#
+#  Backend  → node:18-alpine       (lightweight, ~50 MB)
+#  Frontend → node:18-alpine  (build stage)
+#             nginx:alpine    (serve stage — serves /dist)

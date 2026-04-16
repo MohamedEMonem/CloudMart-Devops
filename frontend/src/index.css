@@ -1,0 +1,27 @@
+/* Tailwind directives — these are replaced by Tailwind's generated CSS at build time */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom global styles */
+body {
+  @apply bg-gray-50 text-gray-900;
+}
+
+/* ── Marquee (brand logos carousel) ──────────────────────────────────────────
+   The track is duplicated in JSX so the loop is seamless:
+   we slide the whole track left by 50% (= one copy), then snap back to 0.
+   Pauses on hover so users can read the logos.
+────────────────────────────────────────────────────────────────────────────── */
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 28s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
