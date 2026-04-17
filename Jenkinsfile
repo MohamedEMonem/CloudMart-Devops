@@ -10,10 +10,15 @@ pipeline {
         
         // AWS Variables
         AWS_REGION = "us-east-1" 
-        S3_BUCKET = "cloudmart-deployments-bucket"
-        EB_APP_NAME = "CloudMart"
-        EB_BACKEND_ENV = "cloudmart-backend-env"
-        EB_FRONTEND_ENV = "cloudmart-frontend-env"
+        S3_BUCKET = "cloud-mart-s3" // Double check this matches your actual S3 bucket name
+
+        // Backend Specifics (From your screenshot)
+        EB_APP_BACKEND = "cloudmart-backend-env"
+        EB_ENV_BACKEND = "cloudmart-backend-env-env"
+
+        // Frontend Specifics (From your screenshot)
+        EB_APP_FRONTEND = "cloudmart-frontend-env"
+        EB_ENV_FRONTEND = "cloudmart-frontend-env-env"
     }
 
     stages {
@@ -29,7 +34,8 @@ pipeline {
             parallel {
                 stage('Build Backend') {
                     steps {
-                        sh "docker build -t ${DOCKER_HUB_USER}/cloudmart-backend:${IMAGE_TAG} -t ${DOCKER_HUB_USER}/cloudmart-backend:latest backend/"                    }
+                        sh "docker build -t ${DOCKER_HUB_USER}/cloudmart-backend:${IMAGE_TAG} -t ${DOCKER_HUB_USER}/cloudmart-backend:latest backend/"
+                    }
                 }
                 stage('Build Frontend') {
                     steps {
@@ -78,14 +84,14 @@ pipeline {
                             
                             aws elasticbeanstalk create-application-version \
                                 --region ${AWS_REGION} \
-                                --application-name "${EB_APP_NAME}" \
+                                --application-name "${EB_APP_BACKEND}" \
                                 --version-label "backend-v${BUILD_NUMBER}" \
                                 --source-bundle S3Bucket="${S3_BUCKET}",S3Key="backend-v${BUILD_NUMBER}.zip"
                             
                             aws elasticbeanstalk update-environment \
                                 --region ${AWS_REGION} \
-                                --application-name "${EB_APP_NAME}" \
-                                --environment-name "${EB_BACKEND_ENV}" \
+                                --application-name "${EB_APP_BACKEND}" \
+                                --environment-name "${EB_ENV_BACKEND}" \
                                 --version-label "backend-v${BUILD_NUMBER}"
                             """
                         }
@@ -112,14 +118,14 @@ pipeline {
                             
                             aws elasticbeanstalk create-application-version \
                                 --region ${AWS_REGION} \
-                                --application-name "${EB_APP_NAME}" \
+                                --application-name "${EB_APP_FRONTEND}" \
                                 --version-label "frontend-v${BUILD_NUMBER}" \
                                 --source-bundle S3Bucket="${S3_BUCKET}",S3Key="frontend-v${BUILD_NUMBER}.zip"
                             
                             aws elasticbeanstalk update-environment \
                                 --region ${AWS_REGION} \
-                                --application-name "${EB_APP_NAME}" \
-                                --environment-name "${EB_FRONTEND_ENV}" \
+                                --application-name "${EB_APP_FRONTEND}" \
+                                --environment-name "${EB_ENV_FRONTEND}" \
                                 --version-label "frontend-v${BUILD_NUMBER}"
                             """
                         }
