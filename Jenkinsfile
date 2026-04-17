@@ -140,9 +140,19 @@ pipeline {
         }
     }
     
+    // Always clean up the Docker login, but wrap it in a node context to prevent MissingContext errors
     post {
         always {
-            sh 'docker logout'
+            node {
+                script {
+                    // We use a try-catch block here so if the logout fails, it doesn't fail the entire pipeline
+                    try {
+                        sh 'docker logout'
+                    } catch (Exception e) {
+                        echo "Docker logout skipped or failed: ${e.message}"
+                    }
+                }
+            }
         }
     }
 }
