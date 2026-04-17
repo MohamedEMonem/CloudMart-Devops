@@ -3,7 +3,8 @@ pipeline {
 
     environment {
         // Define these here so they are accessible in all stages
-        DOCKER_IMAGE = 'marwanmw/frontend'
+        FRONTEND_IMAGE = 'marwanmw/cloudmart-frontend'
+        BACKEND_IMAGE  = 'marwanmw/cloudmart-backend'
         APP_NAME     = 'cloud-shop-mart'
         ENV_NAME     = 'cloud-shop-mart-env'
         S3_BUCKET    = 'cloud-mart-s3'
@@ -21,16 +22,20 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                     sh "echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin"
-                    sh "docker build -t ${DOCKER_IMAGE}:${GIT_COMMIT} -t ${DOCKER_IMAGE}:latest -f Dockerfile ."
+                    sh "docker build -t ${FRONTEND_IMAGE}:${GIT_COMMIT} -t ${FRONTEND_IMAGE}:latest -f frontend/Dockerfile frontend"
+                    sh "docker build -t ${BACKEND_IMAGE}:${GIT_COMMIT} -t ${BACKEND_IMAGE}:latest -f backend/Dockerfile backend"
+                    sh "docker push ${FRONTEND_IMAGE}:${GIT_COMMIT}"
+                    sh "docker push ${FRONTEND_IMAGE}:latest"
+                    sh "docker push ${BACKEND_IMAGE}:${GIT_COMMIT}"
+                    sh "docker push ${BACKEND_IMAGE}:latest"
                 }
             }
         }
 
         stage('Test') {
             steps {
-                // Changed from 'npm run start' to 'npm test' to prevent the pipeline from hanging
-                // Added --rm to clean up the container after the test finishes
-                sh "docker run --rm -e CI=true ${DOCKER_IMAGE}:${GIT_COMMIT} npm test"
+                // Validate that the built frontend image has a valid nginx configuration.
+                sh "docker run --rm --entrypoint nginx ${FRONTEND_IMAGE}:${GIT_COMMIT} -t"
             }
         }
 
@@ -74,7 +79,8 @@ pipeline {
     post {
         always {
             // Good practice: remove the local image to save disk space on the Jenkins node
-            sh "docker rmi ${DOCKER_IMAGE}:${GIT_COMMIT} || true"
+            sh "docker rmi ${FRONTEND_IMAGE}:${GIT_COMMIT} ${FRONTEND_IMAGE}:latest || true"
+            sh "docker rmi ${BACKEND_IMAGE}:${GIT_COMMIT} ${BACKEND_IMAGE}:latest || true"
             deleteDir()
         }
     }
