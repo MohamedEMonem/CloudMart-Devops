@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import api from "../api/axios";
 import { useCart } from "../context/CartContext";
@@ -15,6 +15,7 @@ export default function ProductDetails() {
   const [added, setAdded] = useState(false);
   // Active tab — kept as state so we could add multiple images later
   const [activeTab, setActiveTab] = useState("description");
+  const addedResetTimer = useRef(null);
 
   useEffect(() => {
     setLoading(true);
@@ -29,8 +30,21 @@ export default function ProductDetails() {
   const handleAddToCart = async () => {
     await addToCart(product.id, quantity);
     setAdded(true);
-    setTimeout(() => setAdded(false), 2500);
+
+    if (addedResetTimer.current) {
+      clearTimeout(addedResetTimer.current);
+    }
+
+    addedResetTimer.current = setTimeout(() => setAdded(false), 2500);
   };
+
+  useEffect(() => {
+    return () => {
+      if (addedResetTimer.current) {
+        clearTimeout(addedResetTimer.current);
+      }
+    };
+  }, []);
 
   // ── Loading skeleton ──
   if (loading)

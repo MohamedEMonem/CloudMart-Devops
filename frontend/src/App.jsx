@@ -43,7 +43,7 @@ export default function App() {
                 element={
                   <div className="flex flex-col items-center justify-center h-64 gap-3 text-gray-400">
                     <span className="text-6xl">🔍</span>
-                    <p className="text-xl font-semibold">404 — Page not foun</p>
+                    <p className="text-xl font-semibold">404 — Page not found</p>
                   </div>
                 }
               />

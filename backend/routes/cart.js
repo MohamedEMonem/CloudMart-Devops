@@ -6,6 +6,10 @@ const products = require("../data/products");
 // In production you'd use a database or session store
 let cart = [];
 
+function resetCart() {
+  cart = [];
+}
+
 // GET /api/cart
 // Returns the current cart contents
 router.get("/", (req, res) => {
@@ -70,3 +74,4 @@ router.put("/:productId", (req, res) => {
 });
 
 module.exports = router;
+module.exports.resetCart = resetCart;
