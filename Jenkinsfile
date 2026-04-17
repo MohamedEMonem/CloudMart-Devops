@@ -17,7 +17,7 @@ pipeline {
                 // You must create a 'Username with password' credential in Jenkins named 'docker-credentials'
                 withCredentials([usernamePassword(credentialsId: 'docker-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                     sh 'docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD'
-                    sh 'docker build -t ahmedgamil/react-test -f Dockerfile.dev .'
+                    sh 'docker build -t marwanmw/frontend -f Dockerfile.'
                 }
             }
         }
@@ -25,7 +25,7 @@ pipeline {
         stage('Test') {
             steps {
                 // Equivalent to the Docker run test step
-                sh 'docker run -e CI=true ahmedgamil/react-test npm run test'
+                sh 'docker run -e CI=true marwanmw/frontend npm run start'
             }
         }
 
