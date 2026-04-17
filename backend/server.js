@@ -26,7 +26,7 @@ app.use("/api/cart", cartRoutes);
 
 // Health-check endpoint — useful for Docker / load-balancer probes
 app.get("/health", (req, res) => {
-  res.json({ status: "okkk", timestamp: new Date().toISOString() });
+  res.json({ status: "okkkk", timestamp: new Date().toISOString() });
 });
 
 // ─── Start server ─────────────────────────────────────────────────────────────
