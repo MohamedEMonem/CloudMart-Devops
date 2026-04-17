@@ -8,17 +8,15 @@ pipeline {
         DOCKER_CREDS_ID = 'docker-hub-credentials' 
         IMAGE_TAG = "v${BUILD_NUMBER}" 
         
-        // AWS Variables
         AWS_REGION = "us-east-1" 
-        S3_BUCKET = "cloud-mart-s3" // Double check this matches your actual S3 bucket name
+        S3_BUCKET = "cloud-mart-s3"
 
-        // Backend Specifics (From your screenshot)
-        EB_APP_BACKEND = "cloudmart-backend-env"
-        EB_ENV_BACKEND = "cloudmart-backend-env-env"
+        // These match your screenshot exactly
+        APP_BACKEND = "cloudmart-backend-env"
+        ENV_BACKEND = "cloudmart-backend-env-env"
 
-        // Frontend Specifics (From your screenshot)
-        EB_APP_FRONTEND = "cloudmart-frontend-env"
-        EB_ENV_FRONTEND = "cloudmart-frontend-env-env"
+        APP_FRONTEND = "cloudmart-frontend-env"
+        ENV_FRONTEND = "cloudmart-frontend-env-env"
     }
 
     stages {
@@ -62,12 +60,13 @@ pipeline {
             }
         }
 
-        stage('Deploy to AWS Elastic Beanstalk') {
+        stage('Deploy to AWS') {
             parallel {
                 stage('Deploy Backend') {
                     steps {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                             sh """
+                            # 1. Create the artifact
                             cat <<EOF > Dockerrun-backend.aws.json
                             {
                               "AWSEBDockerrunVersion": "1",
@@ -79,20 +78,13 @@ pipeline {
                             }
                             EOF
                             
+                            # 2. Package and Upload
                             zip backend-deploy.zip Dockerrun-backend.aws.json
                             aws s3 cp backend-deploy.zip s3://${S3_BUCKET}/backend-v${BUILD_NUMBER}.zip
                             
-                            aws elasticbeanstalk create-application-version \
-                                --region ${AWS_REGION} \
-                                --application-name "${EB_APP_BACKEND}" \
-                                --version-label "backend-v${BUILD_NUMBER}" \
-                                --source-bundle S3Bucket="${S3_BUCKET}",S3Key="backend-v${BUILD_NUMBER}.zip"
-                            
-                            aws elasticbeanstalk update-environment \
-                                --region ${AWS_REGION} \
-                                --application-name "${EB_APP_BACKEND}" \
-                                --environment-name "${EB_ENV_BACKEND}" \
-                                --version-label "backend-v${BUILD_NUMBER}"
+                            # 3. Deploy to Beanstalk
+                            aws elasticbeanstalk create-application-version --region ${AWS_REGION} --application-name "${APP_BACKEND}" --version-label "backend-v${BUILD_NUMBER}" --source-bundle S3Bucket="${S3_BUCKET}",S3Key="backend-v${BUILD_NUMBER}.zip"
+                            aws elasticbeanstalk update-environment --region ${AWS_REGION} --application-name "${APP_BACKEND}" --environment-name "${ENV_BACKEND}" --version-label "backend-v${BUILD_NUMBER}"
                             """
                         }
                     }
@@ -102,6 +94,7 @@ pipeline {
                     steps {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                             sh """
+                            # 1. Create the artifact
                             cat <<EOF > Dockerrun-frontend.aws.json
                             {
                               "AWSEBDockerrunVersion": "1",
@@ -113,34 +106,16 @@ pipeline {
                             }
                             EOF
                             
+                            # 2. Package and Upload
                             zip frontend-deploy.zip Dockerrun-frontend.aws.json
                             aws s3 cp frontend-deploy.zip s3://${S3_BUCKET}/frontend-v${BUILD_NUMBER}.zip
                             
-                            aws elasticbeanstalk create-application-version \
-                                --region ${AWS_REGION} \
-                                --application-name "${EB_APP_FRONTEND}" \
-                                --version-label "frontend-v${BUILD_NUMBER}" \
-                                --source-bundle S3Bucket="${S3_BUCKET}",S3Key="frontend-v${BUILD_NUMBER}.zip"
-                            
-                            aws elasticbeanstalk update-environment \
-                                --region ${AWS_REGION} \
-                                --application-name "${EB_APP_FRONTEND}" \
-                                --environment-name "${EB_ENV_FRONTEND}" \
-                                --version-label "frontend-v${BUILD_NUMBER}"
+                            # 3. Deploy to Beanstalk
+                            aws elasticbeanstalk create-application-version --region ${AWS_REGION} --application-name "${APP_FRONTEND}" --version-label "frontend-v${BUILD_NUMBER}" --source-bundle S3Bucket="${S3_BUCKET}",S3Key="frontend-v${BUILD_NUMBER}.zip"
+                            aws elasticbeanstalk update-environment --region ${AWS_REGION} --application-name "${APP_FRONTEND}" --environment-name "${ENV_FRONTEND}" --version-label "frontend-v${BUILD_NUMBER}"
                             """
                         }
                     }
-                }
-            }
-        }
-        
-        stage('Deploy (Local Docker Run)') {
-            steps {
-                script {
-                    sh 'docker rm -f cloudmart-frontend || true'
-                    sh 'docker rm -f cloudmart-backend || true'
-                    sh "docker run -d -p 5000:5000 --name cloudmart-backend ${DOCKER_HUB_USER}/cloudmart-backend:latest"
-                    sh "docker run -d -p 3000:3000 --name cloudmart-frontend ${DOCKER_HUB_USER}/cloudmart-frontend:latest"
                 }
             }
         }
