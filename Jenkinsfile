@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // AWS ECR Configuration (Replace YOUR_ACCOUNT_ID with your actual AWS Account ID)
-        AWS_ACCOUNT_ID = "025064822778:user/autoUser"
+        AWS_ACCOUNT_ID = "025064822778"
         AWS_REGION     = "us-east-1"
         ECR_URL        = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
         
