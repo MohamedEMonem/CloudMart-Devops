@@ -1,0 +1,100 @@
+---
+- name: Configure Jenkins host
+  hosts: jenkins
+  become: true
+  vars:
+    jenkins_repo_key_url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+    jenkins_repo_url: deb https://pkg.jenkins.io/debian-stable binary/
+    docker_repo_key_url: https://download.docker.com/linux/ubuntu/gpg
+    docker_repo_url: deb [arch=amd64] https://download.docker.com/linux/ubuntu noble stable
+    java_packages:
+      - openjdk-17-jdk
+    jenkins_packages:
+      - jenkins
+    docker_packages:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    service_names:
+      - docker
+      - jenkins
+    docker_users:
+      - ubuntu
+      - jenkins
+  tasks:
+    # Refresh package metadata before installing any runtime or repository tooling.
+    - name: Refresh apt cache before installing required packages
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    # Install transport and signing utilities needed for secure apt repositories.
+    - name: Install prerequisites for repository management and HTTPS transport
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+
+    # Jenkins requires Java 17 to run on Ubuntu 24.04.
+    - name: Install OpenJDK 17 for Jenkins runtime support
+      ansible.builtin.apt:
+        name: "{{ java_packages }}"
+        state: present
+
+    # Add the Jenkins repository signing key so package installs are verified.
+    - name: Add the Jenkins repository signing key
+      ansible.builtin.apt_key:
+        url: "{{ jenkins_repo_key_url }}"
+        state: present
+
+    # Register the Jenkins apt source for stable package installation.
+    - name: Add the Jenkins apt repository
+      ansible.builtin.apt_repository:
+        repo: "{{ jenkins_repo_url }}"
+        state: present
+        filename: jenkins
+
+    # Add the Docker repository signing key for package validation.
+    - name: Add the Docker repository signing key
+      ansible.builtin.apt_key:
+        url: "{{ docker_repo_key_url }}"
+        state: present
+
+    # Register the Docker apt source for the Ubuntu 24.04 host.
+    - name: Add the Docker apt repository
+      ansible.builtin.apt_repository:
+        repo: "{{ docker_repo_url }}"
+        state: present
+        filename: docker
+
+    # Rebuild apt metadata after the new repositories are available.
+    - name: Refresh apt cache after adding Jenkins and Docker repositories
+      ansible.builtin.apt:
+        update_cache: true
+
+    # Install Jenkins and the Docker engine/runtime packages in one pass.
+    - name: Install Jenkins and Docker packages
+      ansible.builtin.apt:
+        name: "{{ jenkins_packages + docker_packages }}"
+        state: present
+
+    # Grant Docker access to the ubuntu admin user and the jenkins service account.
+    - name: Add required users to the docker group
+      ansible.builtin.user:
+        name: "{{ item }}"
+        groups: docker
+        append: true
+      loop: "{{ docker_users }}"
+
+    # Ensure Docker and Jenkins are active after installation completes.
+    - name: Ensure Docker and Jenkins services are enabled and running
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: true
+        state: started
+      loop: "{{ service_names }}"

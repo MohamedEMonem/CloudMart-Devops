@@ -1,0 +1,70 @@
+---
+- name: Configure Nginx reverse proxy
+  hosts: nginx
+  become: true
+  vars:
+    nginx_packages:
+      - nginx
+    nginx_service_name: nginx
+    nginx_site_available: /etc/nginx/sites-available/dokkan-proxy
+    nginx_site_enabled: /etc/nginx/sites-enabled/dokkan-proxy
+    nginx_default_site: /etc/nginx/sites-enabled/default
+    ingress_ip: 10.0.2.50
+    ingress_port: 80
+  tasks:
+    # Install the web server packages required for the reverse proxy node.
+    - name: Install Nginx on the proxy host
+      ansible.builtin.apt:
+        name: "{{ nginx_packages }}"
+        state: present
+        update_cache: true
+
+    # Write a dedicated site config that forwards traffic to the Kubernetes ingress.
+    - name: Deploy the reverse proxy site configuration
+      ansible.builtin.copy:
+        dest: "{{ nginx_site_available }}"
+        mode: "0644"
+        content: |
+          server {
+              listen 80;
+              server_name _;
+
+              location / {
+                  proxy_pass http://{{ ingress_ip }}:{{ ingress_port }};
+                  proxy_http_version 1.1;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          }
+      notify: Restart Nginx
+
+    # Remove the default site so it does not shadow the Dokkan proxy config.
+    - name: Disable the default Nginx site to avoid conflicts
+      ansible.builtin.file:
+        path: "{{ nginx_default_site }}"
+        state: absent
+      notify: Restart Nginx
+
+    # Enable the Dokkan site by linking it into sites-enabled.
+    - name: Enable the Dokkan reverse proxy site
+      ansible.builtin.file:
+        src: "{{ nginx_site_available }}"
+        dest: "{{ nginx_site_enabled }}"
+        state: link
+      notify: Restart Nginx
+
+    # Keep the reverse proxy active after provisioning completes.
+    - name: Ensure Nginx is enabled and running
+      ansible.builtin.systemd:
+        name: "{{ nginx_service_name }}"
+        enabled: true
+        state: started
+
+  handlers:
+    # Reload Nginx after config changes to apply the new proxy route.
+    - name: Restart Nginx
+      ansible.builtin.systemd:
+        name: "{{ nginx_service_name }}"
+        state: restarted

@@ -1,0 +1,53 @@
+---
+- name: Initialize Dokkan PostgreSQL database on AWS RDS
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: false
+  vars:
+    rds_host: dokkan-rds.cluster-xxxxxxxxxx.us-east-1.rds.amazonaws.com
+    rds_port: 5432
+    rds_admin_user: postgres
+    rds_admin_password: change-me
+    rds_ssl_mode: require
+    postgres_client_packages:
+      - python3-psycopg2
+      - libpq-dev
+    dokkan_db_name: dokkan_db
+    dokkan_db_user: dokkan_app
+    dokkan_db_password: change-me-too
+    dokkan_db_encoding: UTF8
+    dokkan_db_owner: dokkan_app
+  tasks:
+    # Install the local PostgreSQL client libraries required by community.postgresql.
+    - name: Install PostgreSQL client libraries required by Ansible modules
+      ansible.builtin.apt:
+        name: "{{ postgres_client_packages }}"
+        state: present
+        update_cache: true
+
+    # Create the database user first so it can own the application database.
+    - name: Create the Dokkan application user in RDS PostgreSQL
+      community.postgresql.postgresql_user:
+        name: "{{ dokkan_db_user }}"
+        password: "{{ dokkan_db_password }}"
+        role_attr_flags: LOGIN
+        login_host: "{{ rds_host }}"
+        login_port: "{{ rds_port }}"
+        login_user: "{{ rds_admin_user }}"
+        login_password: "{{ rds_admin_password }}"
+        ssl_mode: "{{ rds_ssl_mode }}"
+        state: present
+
+    # Create the Dokkan database and assign ownership to the application user.
+    - name: Create the Dokkan application database in RDS PostgreSQL
+      community.postgresql.postgresql_db:
+        name: "{{ dokkan_db_name }}"
+        owner: "{{ dokkan_db_owner }}"
+        encoding: "{{ dokkan_db_encoding }}"
+        login_host: "{{ rds_host }}"
+        login_port: "{{ rds_port }}"
+        login_user: "{{ rds_admin_user }}"
+        login_password: "{{ rds_admin_password }}"
+        ssl_mode: "{{ rds_ssl_mode }}"
+        state: present

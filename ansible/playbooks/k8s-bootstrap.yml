@@ -1,0 +1,143 @@
+---
+- name: Bootstrap Kubernetes nodes
+  hosts:
+    - kubernetes_master
+    - kubernetes_workers
+  become: true
+  vars:
+    k8s_packages:
+      - kubelet
+      - kubeadm
+      - kubectl
+    containerd_packages:
+      - containerd
+    containerd_config_path: /etc/containerd/config.toml
+    kubernetes_repo_key_url: https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key
+    kubernetes_repo_url: deb https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /
+    sysctl_settings:
+      - { name: net.bridge.bridge-nf-call-iptables, value: 1 }
+      - { name: net.bridge.bridge-nf-call-ip6tables, value: 1 }
+      - { name: net.ipv4.ip_forward, value: 1 }
+    kernel_modules:
+      - overlay
+      - br_netfilter
+  tasks:
+    # Disable swap immediately because kubelet refuses to start with swap enabled.
+    - name: Disable swap immediately for Kubernetes compatibility
+      ansible.builtin.command:
+        cmd: swapoff -a
+      changed_when: false
+
+    # Comment swap entries in fstab so swap stays disabled after reboot.
+    - name: Prevent swap from being re-enabled on reboot
+      ansible.builtin.replace:
+        path: /etc/fstab
+        regexp: '^(.*\sswap\s.*)$'
+        replace: '# \1'
+
+    # Load the kernel modules needed by container networking at runtime.
+    - name: Load Kubernetes-required kernel modules at runtime
+      ansible.builtin.command:
+        cmd: "modprobe {{ item }}"
+      loop: "{{ kernel_modules }}"
+      changed_when: false
+
+    # Persist module loading so the settings survive node restarts.
+    - name: Persist Kubernetes-required kernel modules across reboots
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/k8s.conf
+        content: |
+          overlay
+          br_netfilter
+        mode: "0644"
+
+    # Configure bridge and IPv4 forwarding parameters required by Kubernetes.
+    - name: Configure sysctl parameters required by Kubernetes networking
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: true
+      loop: "{{ sysctl_settings }}"
+
+    # Install containerd as the container runtime used by kubeadm.
+    - name: Install containerd runtime prerequisites
+      ansible.builtin.apt:
+        name: "{{ containerd_packages }}"
+        state: present
+        update_cache: true
+
+    # Ensure the runtime configuration path exists before writing the config file.
+    - name: Ensure containerd configuration directory exists
+      ansible.builtin.file:
+        path: /etc/containerd
+        state: directory
+        mode: "0755"
+
+    # Generate a base containerd config without relying on manual file assembly.
+    - name: Generate the default containerd configuration
+      ansible.builtin.command:
+        cmd: containerd config default
+      register: containerd_default_config
+      changed_when: false
+
+    # Write the containerd configuration so it can be managed idempotently.
+    - name: Write the containerd configuration file
+      ansible.builtin.copy:
+        dest: "{{ containerd_config_path }}"
+        content: "{{ containerd_default_config.stdout }}\n"
+        mode: "0644"
+      notify: Restart containerd
+
+    # Enable the systemd cgroup driver required by modern Kubernetes releases.
+    - name: Ensure containerd uses the systemd cgroup driver
+      ansible.builtin.replace:
+        path: "{{ containerd_config_path }}"
+        regexp: 'SystemdCgroup = false'
+        replace: 'SystemdCgroup = true'
+      notify: Restart containerd
+
+    # Keep containerd available after installation and configuration changes.
+    - name: Ensure containerd service is enabled and running
+      ansible.builtin.systemd:
+        name: containerd
+        enabled: true
+        state: started
+
+    # Download the Kubernetes repository signing key for apt verification.
+    - name: Add the Kubernetes repository signing key
+      ansible.builtin.apt_key:
+        url: "{{ kubernetes_repo_key_url }}"
+        state: present
+
+    # Add the Kubernetes apt repository used by kubelet, kubeadm, and kubectl.
+    - name: Add the Kubernetes apt repository
+      ansible.builtin.apt_repository:
+        repo: "{{ kubernetes_repo_url }}"
+        state: present
+        filename: kubernetes
+
+    # Refresh apt metadata so the Kubernetes packages are visible to apt.
+    - name: Refresh apt cache after adding the Kubernetes repository
+      ansible.builtin.apt:
+        update_cache: true
+
+    # Install the Kubernetes node tooling on both masters and workers.
+    - name: Install kubelet, kubeadm, and kubectl
+      ansible.builtin.apt:
+        name: "{{ k8s_packages }}"
+        state: present
+
+    # Hold the packages so upgrades do not unexpectedly break cluster compatibility.
+    - name: Mark Kubernetes packages on hold to prevent unintended upgrades
+      ansible.builtin.dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop: "{{ k8s_packages }}"
+
+  handlers:
+    # Restart containerd whenever its configuration changes.
+    - name: Restart containerd
+      ansible.builtin.systemd:
+        name: containerd
+        state: restarted
