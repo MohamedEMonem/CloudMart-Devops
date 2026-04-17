@@ -34,8 +34,44 @@ pipeline {
 
         stage('Test') {
             steps {
-                // Validate that the built frontend image has a valid nginx configuration.
-                sh "docker run --rm --entrypoint nginx ${FRONTEND_IMAGE}:${GIT_COMMIT} -t"
+                // Validate nginx config + /api proxy in a real Docker network.
+                sh '''
+                    set -e
+
+                    docker network create cloudmart-ci >/dev/null 2>&1 || true
+                    docker rm -f cloudmart-ci-backend cloudmart-ci-frontend >/dev/null 2>&1 || true
+
+                    docker run -d --name cloudmart-ci-backend --network cloudmart-ci \
+                        --network-alias backend \
+                        -e PORT=5000 \
+                        ${BACKEND_IMAGE}:${GIT_COMMIT}
+
+                    docker run -d --name cloudmart-ci-frontend --network cloudmart-ci \
+                        ${FRONTEND_IMAGE}:${GIT_COMMIT}
+
+                    # Confirm nginx config loads and proxy works
+                    docker exec cloudmart-ci-frontend nginx -t
+
+                    i=0
+                    until docker exec cloudmart-ci-frontend sh -lc "wget -qO- http://127.0.0.1/api/products >/dev/null"; do
+                        i=$((i+1))
+                        if [ "$i" -ge 15 ]; then
+                            echo "Proxy check failed after $i attempts"
+                            docker logs cloudmart-ci-frontend || true
+                            docker logs cloudmart-ci-backend || true
+                            exit 1
+                        fi
+                        sleep 1
+                    done
+                '''
+            }
+            post {
+                always {
+                    sh '''
+                        docker rm -f cloudmart-ci-backend cloudmart-ci-frontend >/dev/null 2>&1 || true
+                        docker network rm cloudmart-ci >/dev/null 2>&1 || true
+                    '''
+                }
             }
         }
 
