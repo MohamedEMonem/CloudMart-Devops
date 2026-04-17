@@ -22,7 +22,7 @@ pipeline {
             }
         }
 
-        stage('Build Images') {
+        stage('Build Imagess') {
             // 'parallel' tells Jenkins to build backend and frontend at the exact same time
             parallel {
                 stage('Build Backend') {
