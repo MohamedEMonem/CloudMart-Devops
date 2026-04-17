@@ -17,7 +17,7 @@ pipeline {
                 // You must create a 'Username with password' credential in Jenkins named 'docker-credentials'
                 withCredentials([usernamePassword(credentialsId: 'docker-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                     sh 'docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD'
-                    sh 'docker build -t marwanmw/frontend -f Dockerfile.'
+                    sh 'docker build -t marwanmw/frontend -f Dockerfile'
                 }
             }
         }
