@@ -14,6 +14,7 @@ pipeline{
             steps{
                 sh 'docker build -f backend/Dockerfile.test -t backend-test-image ./backend/'        }
                 sh 'docker run --rm backend-test-image'
+        }
         stage('build'){
             steps{
                 sh 'docker build -t ${DOCKER_IMAGE_BACK}:latest ./backend/'
