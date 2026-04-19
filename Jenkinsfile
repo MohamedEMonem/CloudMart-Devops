@@ -48,6 +48,7 @@ pipeline{
         }
         stage('package deployment instructions'){
             steps{
+                sh 'rm -f deploy.zip'
                 sh 'zip deploy.zip docker-compose.yml'
             }
         }
