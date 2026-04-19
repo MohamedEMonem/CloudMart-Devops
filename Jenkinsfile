@@ -48,7 +48,7 @@ pipeline{
         }
         stage('package deployment instructions'){
             steps{
-                sh 'zip deploy.zip Dockerrun.aws.json'
+                sh 'zip deploy.zip docker-compose.yml'
             }
         }
         // stage('Upload to S3 (The Artifactory)') {

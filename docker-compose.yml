@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  backend:
+    image: marwanmw/cloudmart-backend:latest
+    ports:
+      - "5000:5000"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  frontend:
+    image: marwanmw/cloudmart-frontend:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 256M
