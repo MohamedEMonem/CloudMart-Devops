@@ -1,6 +1,18 @@
 {
   "AWSEBDockerrunVersion": 2,
   "containerDefinitions": [
+     {
+      "name": "backend",
+      "image": "marwanmw/cloudmart-backend:latest",
+      "essential": true,
+      "memory": 256,
+      "portMappings": [
+        {
+          "hostPort": 5000,
+          "containerPort": 5000
+        }
+      ]
+    },
     {
       "name": "frontend",
       "image": "marwanmw/cloudmart-frontend:latest",
@@ -15,18 +27,7 @@
       "links": [
         "backend"
       ]
-    },
-    {
-      "name": "backend",
-      "image": "marwanmw/cloudmart-backend:latest",
-      "essential": true,
-      "memory": 256,
-      "portMappings": [
-        {
-          "hostPort": 8080,
-          "containerPort": 5000
-        }
-      ]
     }
+   
   ]
 }
