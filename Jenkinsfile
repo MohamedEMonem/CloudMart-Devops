@@ -33,14 +33,17 @@ pipeline{
         // }
         stage('push to docker hub'){
             steps{
-                script{
-                docker.withRegistry('', 'docker-hub-credentials'){
-                sh 'docker push ${DOCKER_IMAGE_FRONT}:${BUILD_NUMBER}'
-                sh 'docker push ${DOCKER_IMAGE_BACK}:${BUILD_NUMBER}'
-                sh 'docker push ${DOCKER_IMAGE_FRONT}:latest'
-                sh 'docker push ${DOCKER_IMAGE_BACK}:latest'
-            }
-                }
+            withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+            
+            // Log in using the variables
+            sh 'echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin'
+            
+            // Push the images
+            sh 'docker push ${DOCKER_IMAGE_FRONT}:${BUILD_NUMBER}'
+            sh 'docker push ${DOCKER_IMAGE_BACK}:${BUILD_NUMBER}'
+            sh 'docker push ${DOCKER_IMAGE_FRONT}:latest'
+            sh 'docker push ${DOCKER_IMAGE_BACK}:latest'
+        }
             }
         }
         stage('package deployment instructions'){
