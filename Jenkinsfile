@@ -10,9 +10,10 @@ pipeline{
 
     }
     stages{
+
         stage('Test'){
             steps{
-                sh 'docker build -f backend/Dockerfile.test -t backend-test-image ./backend/'        }
+                sh 'docker build -f backend/Dockerfile.test -t backend-test-image ./backend/'
                 sh 'docker run --rm backend-test-image'
         }
     }
