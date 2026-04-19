@@ -23,18 +23,20 @@ pipeline{
                 sh 'docker build -t ${DOCKER_IMAGE_FRONT}:latest ./frontend/'
             }
         }
-        stage('login to docker hub'){
-            steps{
-                withCredentials([usernamePassword(credentialsId:'docker-hub-credentials',passwordVariable:'DOCKER_PASS',usernameVariable:'DOCKER_USER')]){
-                    sh 'echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin'
+        // stage('login to docker hub'){
+        //     steps{
+        //         withCredentials([usernamePassword(credentialsId:'docker-hub-credentials',passwordVariable:'DOCKER_PASS',usernameVariable:'DOCKER_USER')]){
+        //             sh 'echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin'
                    
-                }
-            }
-        }
+        //         }
+        //     }
+        // }
         stage('push to docker hub'){
             steps{
+                docker.withRegistry('', 'docker-hub-credentials'){
                 sh 'docker push ${DOCKER_IMAGE_FRONT}:latest'
                 sh 'docker push ${DOCKER_IMAGE_BACK}:latest'
+            }
             }
         }
         stage('package deployment instructions'){
