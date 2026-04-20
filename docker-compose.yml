@@ -1,27 +1,22 @@
+version: '3.8'
+
 services:
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: marwanmw/cloudmart-backend:__BUILD_NUMBER__
     ports:
       - "5000:5000"
-    environment:
-      - NODE_ENV=production
-      - PORT=5000
-    networks:
-      - cloudmart-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: marwanmw/cloudmart-frontend:__BUILD_NUMBER__
     ports:
-      - "8081:80"
+      - "80:80"
     depends_on:
       - backend
-    networks:
-      - cloudmart-net
-
-networks:
-  cloudmart-net:
-    driver: bridge
+    deploy:
+      resources:
+        limits:
+          memory: 256M

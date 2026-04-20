@@ -1,123 +1,94 @@
-pipeline {
+pipeline{
     agent any
+    environment{
+        DOCKER_IMAGE_FRONT = 'marwanmw/cloudmart-frontend'
+        DOCKER_IMAGE_BACK = 'marwanmw/cloudmart-backend'
+        EB_APP_NAME = "cloudmart"
+        EB_ENV_NAME = "cloudmart-env"
+        AWS_REGION = "us-east-1"
+        S3_BUCKET = "cloud-mart-s3"
 
-    environment {
-        // Define these here so they are accessible in all stages
-        FRONTEND_IMAGE = 'marwanmw/cloudmart-frontend'
-        BACKEND_IMAGE  = 'marwanmw/cloudmart-backend'
-        APP_NAME     = 'cloud-shop-mart'
-        ENV_NAME     = 'cloud-shop-mart-env'
-        S3_BUCKET    = 'cloud-mart-s3'
-        REGION       = 'us-east-1'
     }
+    stages{
 
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
+        stage('Test'){
+            steps{
+                sh 'docker build -f backend/Dockerfile.test -t backend-test-image ./backend/'
+                sh 'docker run --rm backend-test-image'
+        }
+    }
+        stage('build'){
+            steps{
+                sh 'docker build -t ${DOCKER_IMAGE_BACK}:${BUILD_NUMBER} -t ${DOCKER_IMAGE_BACK}:latest ./backend/'
+                sh 'docker build -t ${DOCKER_IMAGE_FRONT}:${BUILD_NUMBER} -t ${DOCKER_IMAGE_FRONT}:latest ./frontend/'
             }
         }
-
-        stage('Docker Setup & Build') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                    sh "echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin"
-                    sh "docker build -t ${FRONTEND_IMAGE}:${GIT_COMMIT} -t ${FRONTEND_IMAGE}:latest -f frontend/Dockerfile frontend"
-                    sh "docker build -t ${BACKEND_IMAGE}:${GIT_COMMIT} -t ${BACKEND_IMAGE}:latest -f backend/Dockerfile backend"
-                    sh "docker push ${FRONTEND_IMAGE}:${GIT_COMMIT}"
-                    sh "docker push ${FRONTEND_IMAGE}:latest"
-                    sh "docker push ${BACKEND_IMAGE}:${GIT_COMMIT}"
-                    sh "docker push ${BACKEND_IMAGE}:latest"
-                }
+        // stage('login to docker hub'){
+        //     steps{
+        //         withCredentials([usernamePassword(credentialsId:'docker-hub-credentials',passwordVariable:'DOCKER_PASS',usernameVariable:'DOCKER_USER')]){
+        //             sh 'echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin'
+                   
+        //         }
+        //     }
+        // }
+        stage('push to docker hub'){
+            steps{
+            withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+            
+            // Log in using the variables
+            sh 'echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin'
+            
+            // Push the images
+            sh 'docker push ${DOCKER_IMAGE_FRONT}:${BUILD_NUMBER}'
+            sh 'docker push ${DOCKER_IMAGE_BACK}:${BUILD_NUMBER}'
+            sh 'docker push ${DOCKER_IMAGE_FRONT}:latest'
+            sh 'docker push ${DOCKER_IMAGE_BACK}:latest'
+        }
             }
         }
-
-        stage('Test') {
-            steps {
-                // Validate nginx config + /api proxy in a real Docker network.
-                sh '''
-                    set -e
-
-                    docker network create cloudmart-ci >/dev/null 2>&1 || true
-                    docker rm -f cloudmart-ci-backend cloudmart-ci-frontend >/dev/null 2>&1 || true
-
-                    docker run -d --name cloudmart-ci-backend --network cloudmart-ci \
-                        --network-alias backend \
-                        -e PORT=5000 \
-                        ${BACKEND_IMAGE}:${GIT_COMMIT}
-
-                    docker run -d --name cloudmart-ci-frontend --network cloudmart-ci \
-                        ${FRONTEND_IMAGE}:${GIT_COMMIT}
-
-                    # Confirm nginx config loads and proxy works
-                    docker exec cloudmart-ci-frontend nginx -t
-
-                    i=0
-                    until docker exec cloudmart-ci-frontend sh -lc "wget -qO- http://127.0.0.1/api/products >/dev/null"; do
-                        i=$((i+1))
-                        if [ "$i" -ge 15 ]; then
-                            echo "Proxy check failed after $i attempts"
-                            docker logs cloudmart-ci-frontend || true
-                            docker logs cloudmart-ci-backend || true
-                            exit 1
-                        fi
-                        sleep 1
-                    done
-                '''
-            }
-            post {
-                always {
-                    sh '''
-                        docker rm -f cloudmart-ci-backend cloudmart-ci-frontend >/dev/null 2>&1 || true
-                        docker network rm cloudmart-ci >/dev/null 2>&1 || true
-                    '''
-                }
+        stage('package deployment instructions'){
+            steps{
+                sh 'rm -f deploy.zip'
+                sh "sed -i 's/__BUILD_NUMBER__/${BUILD_NUMBER}/g' docker-compose.yml"
+                sh 'zip deploy.zip docker-compose.yml'
             }
         }
-
-        stage('Create Deployment Package') {
-            steps {
-                // Ensure zip is installed on your Jenkins agent
-                sh "zip -r deploy.zip . -x '*.git*'"
-            }
-        }
-
-        stage('Deploy to EB (Elastic Beanstalk)') {
+        // stage('Upload to S3 (The Artifactory)') {
+        //     steps {
+        //     }
+        // }
+        stage('Deploy to Elastic Beanstalk') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'), 
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
-                    sh '''
-                        export AWS_DEFAULT_REGION="${REGION}"
-                        VERSION_LABEL="${GIT_COMMIT}"
-                        
-                        echo "1. Uploading deployment package to S3..."
-                        aws s3 cp deploy.zip s3://${S3_BUCKET}/${APP_NAME}/${VERSION_LABEL}.zip
 
-                        echo "2. Creating new Elastic Beanstalk application version..."
+                    sh "aws s3 cp deploy.zip s3://${S3_BUCKET}/deploy-build-${BUILD_NUMBER}.zip"
+                    sh """
                         aws elasticbeanstalk create-application-version \
-                            --application-name ${APP_NAME} \
-                            --version-label ${VERSION_LABEL} \
-                            --source-bundle S3Bucket=${S3_BUCKET},S3Key=${APP_NAME}/${VERSION_LABEL}.zip
-
-                        echo "3. Updating the Elastic Beanstalk environment..."
+                        --region ${AWS_REGION} \
+                        --application-name ${EB_APP_NAME} \
+                        --version-label cloudmart-${BUILD_NUMBER} \
+                        --source-bundle S3Bucket="${S3_BUCKET}",S3Key="deploy-build-${BUILD_NUMBER}.zip"
+                    """
+                
+                
+                    sh """
                         aws elasticbeanstalk update-environment \
-                            --application-name ${APP_NAME} \
-                            --environment-name ${ENV_NAME} \
-                            --version-label ${VERSION_LABEL}
-                    '''
+                        --region ${AWS_REGION} \
+                        --application-name ${EB_APP_NAME} \
+                        --environment-name ${EB_ENV_NAME} \
+                        --version-label cloudmart-${BUILD_NUMBER}
+                    """
                 }
             }
         }
-    }
+        
 
-    post {
-        always {
-            // Good practice: remove the local image to save disk space on the Jenkins node
-            sh "docker rmi ${FRONTEND_IMAGE}:${GIT_COMMIT} ${FRONTEND_IMAGE}:latest || true"
-            sh "docker rmi ${BACKEND_IMAGE}:${GIT_COMMIT} ${BACKEND_IMAGE}:latest || true"
-            deleteDir()
-        }
+
+
+
+
     }
 }
