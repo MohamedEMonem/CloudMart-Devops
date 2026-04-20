@@ -187,7 +187,7 @@ export default function Home() {
               New arrivals every week
             </span>
             <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">
-              Discover Products<br />You'll Love dev1
+              Discover Products<br />You'll Love dev2
             </h1>
             <p className="mt-4 text-navy-200 max-w-md">
               Quality goods, honest prices, fast delivery. CloudMart is your one-stop store for everything you need.
