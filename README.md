@@ -46,3 +46,5 @@ docker-compose up identity-db catalog-db inventory-db cart-redis order-db
 - **Database per Service**: No two services share a database
 - **API Contracts**: Services communicate via REST APIs, never by direct DB access
 - **Bounded Contexts**: Each service owns its domain and data
+# CloudMart-Devops
+This project automates e-commerce microservices deployment using Docker and Kubernetes. It features a full CI/CD pipeline with scalable AWS infrastructure via Terraform. Real-time monitoring ensures zero downtime and high availability.
