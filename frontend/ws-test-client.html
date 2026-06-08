@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dokkan — Real-Time Order Updates</title>
+
+  <!-- Socket.io Client CDN -->
+  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #1a1d27;
+      --accent: #6c5ce7;
+      --success: #00b894;
+      --warning: #fdcb6e;
+      --danger: #d63031;
+      --text: #dfe6e9;
+      --muted: #636e72;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 2rem;
+    }
+
+    h1 {
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+
+    #connection-status {
+      display: inline-block;
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+
+    .status-connected {
+      background: rgba(0, 184, 148, 0.15);
+      color: var(--success);
+    }
+
+    .status-disconnected {
+      background: rgba(214, 48, 49, 0.15);
+      color: var(--danger);
+    }
+
+    .status-connecting {
+      background: rgba(253, 203, 110, 0.15);
+      color: var(--warning);
+    }
+
+    #events-log {
+      max-height: 500px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .event-card {
+      background: var(--card);
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .event-card .order-id {
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 0.9rem;
+    }
+
+    .event-card .status-transition {
+      font-size: 1.1rem;
+      margin: 0.4rem 0;
+    }
+
+    .event-card .timestamp {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .badge-pending {
+      background: rgba(253, 203, 110, 0.2);
+      color: var(--warning);
+    }
+
+    .badge-confirmed {
+      background: rgba(0, 184, 148, 0.2);
+      color: var(--success);
+    }
+
+    .badge-cancelled {
+      background: rgba(214, 48, 49, 0.2);
+      color: var(--danger);
+    }
+
+    .badge-paid {
+      background: rgba(108, 92, 231, 0.2);
+      color: var(--accent);
+    }
+
+    .badge-shipped {
+      background: rgba(9, 132, 227, 0.2);
+      color: #0984e3;
+    }
+
+    .badge-delivered {
+      background: rgba(0, 184, 148, 0.2);
+      color: var(--success);
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .controls {
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    input {
+      background: var(--card);
+      border: 1px solid #2d3436;
+      color: var(--text);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      width: 400px;
+    }
+
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.5rem 1.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+
+    button:hover {
+      opacity: 0.85;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>🔌 Dokkan Real-Time Updates</h1>
+  <p class="subtitle">WebSocket connection to API Gateway</p>
+
+  <div class="controls">
+    <input id="jwt-input" type="text" placeholder="Paste your JWT token here..." />
+    <button onclick="connectSocket()">Connect</button>
+    <button onclick="disconnectSocket()" style="background: var(--danger);">Disconnect</button>
+  </div>
+
+  <div id="connection-status" class="status-disconnected">● Disconnected</div>
+
+  <h2 style="margin: 1rem 0;">Live Events</h2>
+  <div id="events-log"></div>
+
+  <script>
+    // ──────────────────────────────────────────────
+    // Dokkan WebSocket Client
+    //
+    // Usage:
+    //   1. Paste a valid JWT in the input
+    //   2. Click "Connect"
+    //   3. Watch real-time order updates appear
+    //
+    // The client connects to the /ws/v1 namespace on
+    // the API Gateway, authenticating via the JWT
+    // in the handshake auth object.
+    // ──────────────────────────────────────────────
+
+    const GATEWAY_URL = 'http://localhost:3000'; // API Gateway
+    let socket = null;
+
+    function connectSocket() {
+      const token = document.getElementById('jwt-input').value.trim();
+      if (!token) {
+        alert('Please enter a JWT token');
+        return;
+      }
+
+      // Disconnect existing connection if any
+      if (socket) socket.disconnect();
+
+      updateStatus('connecting');
+
+      // ── Establish Socket.io connection ──────────
+      // The JWT is passed in the `auth` object during
+      // the handshake. The EventsGateway validates it
+      // in handleConnection() and maps the socket to
+      // the userId extracted from the token.
+      socket = io(`${GATEWAY_URL}/ws/v1`, {
+        auth: { token },
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 2000,
+      });
+
+      // ── Connection lifecycle events ─────────────
+
+      socket.on('connect', () => {
+        console.log('[WS] Connected — socket ID:', socket.id);
+        updateStatus('connected');
+      });
+
+      socket.on('authenticated', (data) => {
+        console.log('[WS] Authenticated:', data);
+        addEvent('system', `✅ Authenticated as ${data.userId} (${data.role})`);
+      });
+
+      socket.on('disconnect', (reason) => {
+        console.log('[WS] Disconnected:', reason);
+        updateStatus('disconnected');
+        addEvent('system', `🔌 Disconnected: ${reason}`);
+      });
+
+      socket.on('connect_error', (err) => {
+        console.error('[WS] Connection error:', err.message);
+        updateStatus('disconnected');
+        addEvent('system', `❌ Connection error: ${err.message}`);
+      });
+
+      socket.on('error', (err) => {
+        console.error('[WS] Server error:', err);
+        addEvent('system', `❌ ${err.message}`);
+      });
+
+      // ──────────────────────────────────────────────
+      // REAL-TIME EVENT LISTENER
+      //
+      // This is the core listener the frontend uses
+      // to receive push notifications when an order
+      // status changes. The payload contains:
+      //   { orderId, previousStatus, status, updatedAt }
+      // ──────────────────────────────────────────────
+      socket.on('order_update', (payload) => {
+        console.log('[WS] 📡 Order Update:', payload);
+
+        addEvent('order', payload);
+      });
+    }
+
+    function disconnectSocket() {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+      updateStatus('disconnected');
+    }
+
+    function updateStatus(state) {
+      const el = document.getElementById('connection-status');
+      el.className = `status-${state}`;
+      const labels = {
+        connected: '● Connected',
+        disconnected: '● Disconnected',
+        connecting: '◌ Connecting...',
+      };
+      el.textContent = labels[state] || state;
+    }
+
+    function addEvent(type, data) {
+      const log = document.getElementById('events-log');
+      const card = document.createElement('div');
+      card.className = 'event-card';
+
+      if (type === 'system') {
+        card.innerHTML = `
+          <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+          <div>${data}</div>
+        `;
+      } else if (type === 'order') {
+        const statusClass = `badge-${data.status.toLowerCase()}`;
+        card.innerHTML = `
+          <div class="order-id">Order #${data.orderId.substring(0, 8)}...</div>
+          <div class="status-transition">
+            <span class="badge badge-${data.previousStatus.toLowerCase()}">${data.previousStatus}</span>
+            → <span class="badge ${statusClass}">${data.status}</span>
+          </div>
+          <div class="timestamp">${new Date(data.updatedAt).toLocaleString()}</div>
+        `;
+      }
+
+      log.prepend(card);
+    } 
+  </script>
+</body>
+
+</html>

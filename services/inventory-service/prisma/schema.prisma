@@ -1,0 +1,51 @@
+// ──────────────────────────────────────────────
+// Inventory Service — Prisma Schema
+// Database: PostgreSQL (isolated instance)
+// ──────────────────────────────────────────────
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MovementType {
+  INBOUND
+  OUTBOUND
+  RESERVATION
+  RELEASE
+}
+
+model InventoryItem {
+  id                String   @id @default(uuid())
+  productId         String   @unique @map("product_id") // External reference to Product Catalog
+  sku               String   @unique
+  quantityAvailable Int      @default(0) @map("quantity_available")
+  quantityReserved  Int      @default(0) @map("quantity_reserved")
+  warehouseLocation String?  @map("warehouse_location")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  movements StockMovement[]
+
+  @@index([productId])
+  @@map("inventory_items")
+}
+
+model StockMovement {
+  id              String       @id @default(uuid())
+  inventoryItemId String       @map("inventory_item_id")
+  quantityChange  Int          @map("quantity_change")
+  movementType    MovementType @map("movement_type")
+  referenceId     String?      @map("reference_id") // e.g., orderId
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryItemId])
+  @@index([referenceId])
+  @@map("stock_movements")
+}

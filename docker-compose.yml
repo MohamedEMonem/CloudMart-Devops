@@ -1,0 +1,256 @@
+services:
+  # ──────────────────────────────────────────────
+  # INFRASTRUCTURE
+  # ──────────────────────────────────────────────
+
+  # ── Message Broker ────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"     # AMQP protocol
+      - "15672:15672"   # Management UI → http://localhost:15672
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./infrastructure/rabbitmq/setup-dlq.sh:/scripts/setup-dlq.sh:ro
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ──────────────────────────────────────────────
+  # DATABASES (one per service — strict isolation)
+  # ──────────────────────────────────────────────
+
+  identity-db:
+    image: postgres:16-alpine
+    container_name: identity-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: identity_user
+      POSTGRES_PASSWORD: identity_secret
+      POSTGRES_DB: identity_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - identity_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-net
+
+  inventory-db:
+    image: postgres:16-alpine
+    container_name: inventory-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: inventory_user
+      POSTGRES_PASSWORD: inventory_secret
+      POSTGRES_DB: inventory_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - inventory_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-net
+
+  order-db:
+    image: postgres:16-alpine
+    container_name: order-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: order_secret
+      POSTGRES_DB: order_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - order_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-net
+
+  catalog-db:
+    image: mongo:7
+    container_name: catalog-db
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: catalog_user
+      MONGO_INITDB_ROOT_PASSWORD: catalog_secret
+      MONGO_INITDB_DATABASE: catalog_db
+    ports:
+      - "27018:27017"
+    volumes:
+      - catalog_data:/data/db
+    networks:
+      - ecommerce-net
+
+  cart-redis:
+    image: redis:7-alpine
+    container_name: cart-redis
+    restart: unless-stopped
+    command: redis-server --requirepass cart_secret
+    ports:
+      - "6380:6379"
+    volumes:
+      - cart_data:/data
+    networks:
+      - ecommerce-net
+
+  # ──────────────────────────────────────────────
+  # API GATEWAY (single entry point)
+  # ──────────────────────────────────────────────
+
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    restart: unless-stopped
+    ports:
+      - "3000:3000"   # ← the ONLY port exposed to the frontend/clients
+    environment:
+      JWT_SECRET: super-secret-jwt-key-change-in-production
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      PORT: 3000
+    depends_on:
+      - rabbitmq
+      - identity-service
+      - product-catalog-service
+      - inventory-service
+      - cart-service
+      - order-service
+      - payment-service
+    networks:
+      - ecommerce-net
+
+  # ──────────────────────────────────────────────
+  # MICROSERVICES
+  # ──────────────────────────────────────────────
+
+  identity-service:
+    build:
+      context: ./services/identity-service
+      dockerfile: Dockerfile
+    container_name: identity-service
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      DATABASE_URL: postgresql://identity_user:identity_secret@identity-db:5432/identity_db
+      JWT_SECRET: super-secret-jwt-key-change-in-production
+      JWT_EXPIRES_IN: 15m
+      PORT: 3000
+    depends_on:
+      - identity-db
+    networks:
+      - ecommerce-net
+
+  product-catalog-service:
+    build:
+      context: ./services/product-catalog-service
+      dockerfile: Dockerfile
+    container_name: product-catalog-service
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    environment:
+      MONGODB_URI: mongodb://catalog_user:catalog_secret@catalog-db:27017/catalog_db?authSource=admin
+      PORT: 3000
+    depends_on:
+      - catalog-db
+    networks:
+      - ecommerce-net
+
+  inventory-service:
+    build:
+      context: ./services/inventory-service
+      dockerfile: Dockerfile
+    container_name: inventory-service
+    restart: unless-stopped
+    ports:
+      - "3003:3000"
+    environment:
+      DATABASE_URL: postgresql://inventory_user:inventory_secret@inventory-db:5432/inventory_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      PORT: 3000
+    depends_on:
+      - inventory-db
+      - rabbitmq
+    networks:
+      - ecommerce-net
+
+  cart-service:
+    build:
+      context: ./services/cart-service
+      dockerfile: Dockerfile
+    container_name: cart-service
+    restart: unless-stopped
+    ports:
+      - "3004:3000"
+    environment:
+      REDIS_HOST: cart-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: cart_secret
+      PORT: 3000
+    depends_on:
+      - cart-redis
+    networks:
+      - ecommerce-net
+
+  order-service:
+    build:
+      context: ./services/order-service
+      dockerfile: Dockerfile
+    container_name: order-service
+    restart: unless-stopped
+    ports:
+      - "3005:3000"
+    environment:
+      DATABASE_URL: postgresql://order_user:order_secret@order-db:5432/order_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      PORT: 3000
+    depends_on:
+      - order-db
+      - rabbitmq
+    networks:
+      - ecommerce-net
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+    container_name: payment-service
+    restart: unless-stopped
+    ports:
+      - "3006:3000"
+    environment:
+      STRIPE_SECRET_KEY: sk_test_placeholder
+      PAYPAL_CLIENT_ID: paypal_placeholder
+      PAYPAL_CLIENT_SECRET: paypal_secret_placeholder
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      PORT: 3000
+    depends_on:
+      - rabbitmq
+    networks:
+      - ecommerce-net
+
+# ──────────────────────────────────────────────
+# VOLUMES & NETWORKS
+# ──────────────────────────────────────────────
+
+volumes:
+  identity_data:
+  inventory_data:
+  order_data:
+  catalog_data:
+  cart_data:
+  rabbitmq_data:
+
+networks:
+  ecommerce-net:
+    driver: bridge
