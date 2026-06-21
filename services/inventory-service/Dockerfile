@@ -17,4 +17,22 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/prisma ./prisma
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=30s \
+  CMD wget --quiet --tries=1 --spider http://localhost:3000/api/v1/health || exit 1
+
+CMD ["sh", "-c", "\
+  for i in 1 2 3 4 5; do \
+    echo \"Attempt $i: Running prisma migrate deploy...\"; \
+    if npx prisma migrate deploy; then \
+      echo \"Migrations completed successfully\"; \
+      break; \
+    fi; \
+    if [ $i -lt 5 ]; then \
+      WAIT=$((i * 5)); \
+      echo \"Migration failed, retrying in ${WAIT}s...\"; \
+      sleep $WAIT; \
+    fi; \
+  done && \
+  node dist/main \
+"]

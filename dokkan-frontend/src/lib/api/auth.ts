@@ -33,3 +33,8 @@ export async function login(payload: LoginPayload): Promise<AuthResponse> {
   const { data } = await apiClient.post<AuthResponse>('/auth/login', payload);
   return data;
 }
+
+export async function getCurrentUser(): Promise<AuthResponse['user']> {
+  const { data } = await apiClient.get<AuthResponse['user']>('/users/me');
+  return data;
+}

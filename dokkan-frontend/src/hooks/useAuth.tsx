@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
-import { login as apiLogin, register as apiRegister } from '@/lib/api/auth';
+import { login as apiLogin, register as apiRegister, getCurrentUser } from '@/lib/api/auth';
 import type { LoginPayload, RegisterPayload, AuthResponse } from '@/lib/api/auth';
 
 // ── Types ───────────────────────────────────────────────────
@@ -31,21 +31,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Hydrate from localStorage on mount
+  // Hydrate from localStorage on mount and verify via API
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    if (storedToken && storedUser && storedUser !== 'undefined') {
-      try {
-        setUser(JSON.parse(storedUser));
-        setToken(storedToken);
-      } catch (e) {
-        console.error('Failed to parse user from localStorage', e);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+    const hydrate = async () => {
+      const storedToken = localStorage.getItem('token');
+      if (storedToken) {
+        try {
+          const userData = await getCurrentUser();
+          setUser(userData);
+          setToken(storedToken);
+          localStorage.setItem('user', JSON.stringify(userData));
+        } catch (e) {
+          console.error('Failed to authenticate with stored token', e);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+          setToken(null);
+        }
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    hydrate();
   }, []);
 
   const handleAuthResponse = useCallback((res: AuthResponse) => {

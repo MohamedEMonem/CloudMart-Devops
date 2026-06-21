@@ -20,7 +20,7 @@ services:
     networks:
       - ecommerce-net
     healthcheck:
-      test: rabbitmq-diagnostics -q ping
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -43,6 +43,11 @@ services:
       - identity_data:/var/lib/postgresql/data
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U identity_user -d identity_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   inventory-db:
     image: postgres:16-alpine
@@ -58,9 +63,19 @@ services:
       - inventory_data:/var/lib/postgresql/data
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory_user -d inventory_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   order-db:
     image: postgres:16-alpine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_user -d order_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     container_name: order-db
     restart: unless-stopped
     environment:
@@ -88,6 +103,11 @@ services:
       - catalog_data:/data/db
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   cart-redis:
     image: redis:7-alpine
@@ -100,6 +120,11 @@ services:
       - cart_data:/data
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "cart_secret", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # ──────────────────────────────────────────────
   # API GATEWAY (single entry point)
@@ -118,13 +143,20 @@ services:
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       PORT: 3000
     depends_on:
-      - rabbitmq
-      - identity-service
-      - product-catalog-service
-      - inventory-service
-      - cart-service
-      - order-service
-      - payment-service
+      rabbitmq:
+        condition: service_healthy
+      identity-service:
+        condition: service_healthy
+      product-catalog-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+      cart-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -146,7 +178,8 @@ services:
       JWT_EXPIRES_IN: 15m
       PORT: 3000
     depends_on:
-      - identity-db
+      identity-db:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -162,7 +195,8 @@ services:
       MONGODB_URI: mongodb://catalog_user:catalog_secret@catalog-db:27017/catalog_db?authSource=admin
       PORT: 3000
     depends_on:
-      - catalog-db
+      catalog-db:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -179,8 +213,10 @@ services:
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       PORT: 3000
     depends_on:
-      - inventory-db
-      - rabbitmq
+      inventory-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -198,7 +234,8 @@ services:
       REDIS_PASSWORD: cart_secret
       PORT: 3000
     depends_on:
-      - cart-redis
+      cart-redis:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -215,8 +252,10 @@ services:
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       PORT: 3000
     depends_on:
-      - order-db
-      - rabbitmq
+      order-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -235,7 +274,8 @@ services:
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       PORT: 3000
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
