@@ -1,8 +1,8 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import { getCart, addCartItem, removeCartItem, type Cart, type CartItem } from '@/lib/api/cart';
-import { useAuth } from './useAuth';
+import { getCart, addCartItem, removeCartItem, type Cart, type CartItem } from './api';
+import { useAuth } from '@/modules/auth/useAuth';
 
 // ── Types ────────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-import api from './client';
+import api from '@/lib/api/client';
 
 export interface Product {
   _id: string;
