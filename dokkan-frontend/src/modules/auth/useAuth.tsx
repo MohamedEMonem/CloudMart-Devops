@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
-import { login as apiLogin, register as apiRegister, getCurrentUser } from '@/lib/api/auth';
-import type { LoginPayload, RegisterPayload, AuthResponse } from '@/lib/api/auth';
+import { login as apiLogin, register as apiRegister, getCurrentUser } from './api';
+import type { LoginPayload, RegisterPayload, AuthResponse } from './api';
 
 // ── Types ───────────────────────────────────────────────────
 interface User {

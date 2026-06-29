@@ -1,4 +1,5 @@
-import api from './client';
+import api from '@/lib/api/client';
+import type { ShippingAddress } from './CheckoutContext';
 
 // ── Types ────────────────────────────────────────────────────
 export interface OrderItemPayload {
@@ -13,7 +14,7 @@ export interface OrderItemPayload {
 export interface CreateOrderPayload {
   userId: string;
   items: OrderItemPayload[];
-  shippingAddress: Record<string, any>;
+  shippingAddress: ShippingAddress;
 }
 
 export interface OrderResponse {

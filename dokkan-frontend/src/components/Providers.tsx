@@ -1,7 +1,7 @@
 'use client';
 
-import { AuthProvider } from '@/hooks/useAuth';
-import { CartProvider } from '@/hooks/useCart';
+import { AuthProvider } from '@/modules/auth/useAuth';
+import { CartProvider } from '@/modules/cart/useCart';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
