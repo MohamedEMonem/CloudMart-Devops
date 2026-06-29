@@ -14,7 +14,7 @@ const categoryBlurb: Record<string, string> = {
 
 export function generateStaticParams() {
   return categories.map((c) => ({ category: c.toLowerCase() }));
-}
+} 
 
 export async function generateMetadata({
   params,
