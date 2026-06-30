@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cart-redis-pvc
+  namespace: cloudmart
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart-redis
+  namespace: cloudmart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cart-redis
+  template:
+    metadata:
+      labels:
+        app: cart-redis
+    spec:
+      containers:
+        - name: cart-redis
+          image: redis:7-alpine
+          command: ["redis-server", "--requirepass", "$(REDIS_PASSWORD)"]
+          ports:
+            - containerPort: 6379
+          envFrom:
+            - secretRef:
+                name: cart-redis-secret
+          volumeMounts:
+            - name: cart-redis-storage
+              mountPath: /data
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "-a", "$(REDIS_PASSWORD)", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "-a", "$(REDIS_PASSWORD)", "ping"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+      volumes:
+        - name: cart-redis-storage
+          persistentVolumeClaim:
+            claimName: cart-redis-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart-redis
+  namespace: cloudmart
+spec:
+  selector:
+    app: cart-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
