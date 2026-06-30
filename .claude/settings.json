@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker exec api-gateway sh -c ' *)",
+      "Bash(cd '\\\\\\\\wsl.localhost\\\\Ubuntu\\\\home\\\\habeb\\\\CloudMart-Devops\\\\dokkan-frontend' && find src -type f | sort)",
+      "Read(///wsl.localhost/Ubuntu/home/habeb/CloudMart-Devops/**)",
+      "Bash(cd '\\\\\\\\wsl.localhost\\\\Ubuntu\\\\home\\\\habeb\\\\CloudMart-Devops\\\\dokkan-frontend' && node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json 2>&1 | head -150)",
+      "Bash(wsl.exe -d Ubuntu -- bash -lc 'echo \"--- which ---\"; which node; which npm; echo \"--- versions ---\"; node -v; npm -v; echo \"--- PATH ---\"; echo $PATH | tr \":\" \"\\\\n\"')",
+      "Bash(wsl.exe -d Ubuntu -- bash -lc 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash')",
+      "Bash(wsl.exe -d Ubuntu -- bash -lc 'export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && \\\\. \"$NVM_DIR/nvm.sh\"; nvm ls; echo \"--- installing node 20 ---\"; nvm install 20; nvm alias default 20; echo \"--- verify ---\"; which node; node -v; which npm; npm -v')",
+      "Bash(wsl.exe -d Ubuntu -- bash -lc 'ls -la $HOME/.nvm/ 2>&1 | head -20; echo \"---\"; cat $HOME/.bashrc | grep -A3 NVM_DIR')",
+      "Bash(wsl.exe -d Ubuntu -- bash -lc 'ls -la $HOME/.nvm/*.sh 2>&1; echo \"---full listing---\"; ls -la $HOME/.nvm/')",
+      "Bash(wsl.exe -d Ubuntu -- bash -lc 'grep -n \"return\\\\|NVM_DIR\" $HOME/.bashrc | head -30')",
+      "Bash(wsl.exe -d Ubuntu -- bash -lc 'getent passwd habeb | cut -d: -f7; echo \"---\"; cat /etc/wsl.conf 2>&1; echo \"---defaultUser check---\"; cat /etc/wsl-distribution.conf 2>&1')",
+      "Bash(wsl.exe -d Ubuntu -- bash -lc 'source \"$HOME/.nvm/nvm.sh\"; nvm install 20 2>&1; nvm alias default 20 2>&1; nvm use default 2>&1')",
+      "Bash(wsl.exe -d Ubuntu -- bash -lc 'which node; node -v; which npm; npm -v; which next 2>&1')"
+    ]
+  }
+}

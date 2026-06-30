@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Providers from "@/components/Providers";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import CartDrawer from "@/modules/cart/components/CartDrawer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,9 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dokkan — Multi-Vendor Marketplace",
+  title: "Dokkan — Electronics Marketplace",
   description:
-    "Real-time multi-vendor e-commerce platform powered by NestJS microservices.",
+    "Real-time electronics marketplace — audio, computing, mobile, wearables, and smart home, powered by NestJS microservices.",
 };
 
 export default function RootLayout({
@@ -27,10 +30,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#0a0a0a] text-white">
-        <Providers>{children}</Providers>
+      <body className="min-h-full flex flex-col">
+        <Providers>
+          <Header />
+          {children}
+          <Footer />
+          <CartDrawer />
+        </Providers>
       </body>
     </html>
   );
