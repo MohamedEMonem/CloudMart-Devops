@@ -1,3 +1,29 @@
+# Team Members & responsibilities
+<table>
+  <thead>
+    <tr>
+      <th>Task</th>
+      <th>Assigned to</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Ansible</td><td>Mohamed Essam</td></tr>
+    <tr><td>Maintain backend code</td><td>Marwan Sherif/ Essam</td></tr>
+    <tr><td>Terraform</td><td>Marwan Sherif</td></tr>
+    <tr><td>Maintain frontend code</td><td>Habiba ehab</td></tr>
+    <tr><td>Kubernetes</td><td>Habiba ehab / Tahany Edress</td></tr>
+    <tr><td>Dockerization</td><td>Tahany Edress</td></tr>
+    <tr><td>Nginx</td><td>Tahany Edress</td></tr>
+    <tr><td>Prometheus / Grafana</td><td>Mahmoud Tayar</td></tr>
+    <tr><td>CI/CD</td><td>Youssef Wali</td></tr>
+    <tr><td>Create test cases</td><td>Youssef Wali</td></tr>
+    <tr><td>Automated rollback</td><td>Included in (CI/CD, Artifact, Kubernetes)</td></tr>
+    <tr><td>Git repository Moderation</td><td>Mohamed Essam / Team contribution</td></tr>
+  </tbody>
+</table>
+
+## supervised by Eng.Ahmed Gamil
+
 # E-Commerce Microservices — Phase 1: Bounded Contexts
 
 A scalable e-commerce platform built with **Domain-Driven Design (DDD)** and a strict **microservices architecture**.
