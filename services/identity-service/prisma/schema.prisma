@@ -1,6 +1,6 @@
 // ──────────────────────────────────────────────
 // Identity & User Service — Prisma Schema
-// UPDATED: Multi-Vendor Marketplace (Dokkan)
+// UPDATED: Multi-Vendor Marketplace (cloudmart)
 // ──────────────────────────────────────────────
 
 generator client {

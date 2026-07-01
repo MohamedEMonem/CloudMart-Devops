@@ -2,9 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(docker exec api-gateway sh -c ' *)",
-      "Bash(cd '\\\\\\\\wsl.localhost\\\\Ubuntu\\\\home\\\\habeb\\\\CloudMart-Devops\\\\dokkan-frontend' && find src -type f | sort)",
+      "Bash(cd '\\\\\\\\wsl.localhost\\\\Ubuntu\\\\home\\\\habeb\\\\CloudMart-Devops\\\\cloudmart-frontend' && find src -type f | sort)",
       "Read(///wsl.localhost/Ubuntu/home/habeb/CloudMart-Devops/**)",
-      "Bash(cd '\\\\\\\\wsl.localhost\\\\Ubuntu\\\\home\\\\habeb\\\\CloudMart-Devops\\\\dokkan-frontend' && node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json 2>&1 | head -150)",
+      "Bash(cd '\\\\\\\\wsl.localhost\\\\Ubuntu\\\\home\\\\habeb\\\\CloudMart-Devops\\\\cloudmart-frontend' && node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json 2>&1 | head -150)",
       "Bash(wsl.exe -d Ubuntu -- bash -lc 'echo \"--- which ---\"; which node; which npm; echo \"--- versions ---\"; node -v; npm -v; echo \"--- PATH ---\"; echo $PATH | tr \":\" \"\\\\n\"')",
       "Bash(wsl.exe -d Ubuntu -- bash -lc 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash')",
       "Bash(wsl.exe -d Ubuntu -- bash -lc 'export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && \\\\. \"$NVM_DIR/nvm.sh\"; nvm ls; echo \"--- installing node 20 ---\"; nvm install 20; nvm alias default 20; echo \"--- verify ---\"; which node; node -v; which npm; npm -v')",

@@ -149,7 +149,7 @@ services:
 
   frontend:
     build:
-      context: ./dokkan-frontend
+      context: ./cloudmart-frontend
       dockerfile: Dockerfile
     container_name: frontend
     restart: unless-stopped
