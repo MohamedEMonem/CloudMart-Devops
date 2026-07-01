@@ -1,7 +1,7 @@
 module "backend" {
   source                       = "squareops/tfstate/aws"
   logging                      = true
-  bucket_name                  = "production-tfstate-bucket-marwan"
+  bucket_name                  = "production-tfstate-bucket-mohamed"
   environment                  = "prod"
   force_destroy                = true
   versioning_enabled           = true
