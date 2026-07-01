@@ -19,37 +19,37 @@ module "eks" {
       min_size       = 2
       max_size       = 5
       desired_size   = 2
-      
-      instance_types = ["t3.small"]
-      
-      # Force EKS to use the leaner Amazon Linux 2 OS
-      ami_type       = "AL2_x86_64" 
-    }
+      instance_types  = ["t3.medium"]
   }
+}
 
-
-  # Serverless Compute Profile
-  # fargate_profiles = {
-  #   cloudmart_fargate = {
-  #     name = "cloudmart-fargate-profile"
-  #     selectors = [
-  #       {
-  #         namespace = "default"     # Your Node.js app will run here
-  #       },
-  #       {
-  #         namespace = "kube-system" # Required so Kubernetes system apps can run serverless too
-  #       }
-  #     ]
-  #   }
-  # }
+#   # Serverless Compute Profile
+#   fargate_profiles = {
+#     cloudmart_fargate = {
+#       name = "cloudmart-fargate-profile"
+#       selectors = [
+#         {
+#           namespace = "default"     # Your Node.js app will run here
+#         },
+#         {
+#           namespace = "kube-system" # Required so Kubernetes system apps can run serverless too
+#         }
+#       ]
+#     }
+#   }
 
   # tags = {
   #   Environment = var.environment
   #   Project     = "CloudMart E-Commerce"
   # }
 }
+#   tags = {
+#     Environment = var.environment
+#     Project     = "CloudMart E-Commerce"
+#   }
+# }
 
-# 1. Add your user as an access entry
+# # 1. Add your user as an access entry
 # resource "aws_eks_access_entry" "admin_user" {
 #   cluster_name  = "cloudmart-cluster-prod" 
 #   principal_arn = "arn:aws:iam::025064822778:user/terraform"
@@ -87,10 +87,7 @@ module "eks" {
 
 #   # Ensure the cluster and Fargate profiles are built first
 #   depends_on = [module.eks] 
-
 # }
-
-
 
 output "cluster_name" {
   value = module.eks.cluster_name
