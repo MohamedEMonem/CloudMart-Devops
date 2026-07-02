@@ -1,4 +1,17 @@
 # Team Members & responsibilities
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Role</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Supervised By</td><td>Ahmed Gamil</td></tr>
+  </tbody>
+</table>
+
 <table>
   <thead>
     <tr>
@@ -7,8 +20,6 @@
     </tr>
   </thead>
   <tbody>
-    <tr><td>Supervised By</td><td>Ahmed Gamil</td></tr>
-    <tr><td>Team lead</td><td>Mohamed Essam</td></tr>
     <tr><td>Ansible</td><td>Mohamed Essam</td></tr>
     <tr><td>Maintain backend code</td><td>Marwan Sherif/ Essam</td></tr>
     <tr><td>Terraform</td><td>Marwan Sherif</td></tr>
