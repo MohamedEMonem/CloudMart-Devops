@@ -9,6 +9,11 @@ output "rds_db_name" {
   value       = "cloudmartdb" # Since this is hardcoded in your module, we can just hardcode it here
 }
 
+output "vpc_id" {
+  description = "The ID of the VPC created for the CloudMart E-Commerce application"
+  value       = module.vpc.vpc_id
+}
+
 output "eks-cluster_name" {
   value = module.eks.cluster_name
 }
