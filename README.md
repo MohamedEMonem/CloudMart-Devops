@@ -3,18 +3,6 @@
 <table>
   <thead>
     <tr>
-      <th>Name</th>
-      <th>Role</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr><td>Supervised By</td><td>Ahmed Gamil</td></tr>
-  </tbody>
-</table>
-
-<table>
-  <thead>
-    <tr>
       <th>Task</th>
       <th>Assigned to</th>
     </tr>
@@ -36,6 +24,8 @@
 </table>
 
 ## supervised by Eng.Ahmed Gamil
+
+
 
 # E-Commerce Microservices — Phase 1: Bounded Contexts
 
