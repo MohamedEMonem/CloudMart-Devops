@@ -32,13 +32,13 @@ spec:
                 name: jwt-secret
           readinessProbe:
             httpGet:
-              path: /health
+              path: api/v1/health
               port: 3000
             initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /health
+              path: api/v1/health
               port: 3000
             initialDelaySeconds: 20
             periodSeconds: 15
