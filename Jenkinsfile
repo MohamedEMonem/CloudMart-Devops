@@ -29,20 +29,26 @@ pipeline {
 
         stage('Install Test Dependencies') {
             agent {
-        docker { 
-            image 'node:18-alpine' // Match this to your project's required Node version
-            reuseNode true
-        }
-    }
-    steps {
-        dir('tests') {
-            sh 'npm ci --cache .npm-cache'
-        }
-    }
+                docker { 
+                    image 'node:18-alpine' 
+                    reuseNode true
+                }
+            }
+            steps {
+                dir('tests') {
+                    sh 'npm ci --cache .npm-cache'
+                }
+            }
         }
 
 
         stage('Run Tests') {
+            agent {
+                docker { 
+                    image 'node:18-alpine' 
+                    reuseNode true
+                }
+            }
             parallel {
                 stage('Unit Tests') {
                     steps {
@@ -238,6 +244,12 @@ pipeline {
 
 
         stage('Integration Tests') {
+            agent {
+                docker { 
+                    image 'node:18-alpine' 
+                    reuseNode true
+                }
+            }
             steps {
                 dir('tests') {
                     sh 'npx jest tests/integration --verbose --ci --runInBand --forceExit'
@@ -262,26 +274,12 @@ pipeline {
             echo "  📦  Images tagged: ${IMAGE_TAG} + latest"
             echo '  🚀  Deployed to Kubernetes (cloudmart)'
             echo '══════════════════════════════════════════════'
-
-            // Uncomment to enable Slack notifications
-            // slackSend(
-            //     color: 'good',
-            //     channel: '#deployments',
-            //     message: "✅ *CloudMart* build #${BUILD_NUMBER} deployed successfully.\nBranch: `${env.BRANCH_NAME}`  Commit: `${env.GIT_COMMIT?.take(8)}`"
-            // )
         }
 
         failure {
             echo '══════════════════════════════════════════════'
             echo '  ❌  Pipeline FAILED — check logs above.'
             echo '══════════════════════════════════════════════'
-
-            // Uncomment to enable Slack notifications
-            // slackSend(
-            //     color: 'danger',
-            //     channel: '#deployments',
-            //     message: "❌ *CloudMart* build #${BUILD_NUMBER} FAILED.\nBranch: `${env.BRANCH_NAME}`  Commit: `${env.GIT_COMMIT?.take(8)}`\n${BUILD_URL}console"
-            // )
         }
 
         unstable {
