@@ -36,7 +36,7 @@ pipeline {
     }
     steps {
         dir('tests') {
-            sh 'npm ci'
+            sh 'npm ci --cache .npm-cache'
         }
     }
         }
