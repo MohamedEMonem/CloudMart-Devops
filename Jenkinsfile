@@ -28,11 +28,17 @@ pipeline {
 
 
         stage('Install Test Dependencies') {
-            steps {
-                dir('tests') {
-                    sh 'npm ci'
-                }
-            }
+            agent {
+        docker { 
+            image 'node:18-alpine' // Match this to your project's required Node version
+            reuseNode true
+        }
+    }
+    steps {
+        dir('tests') {
+            sh 'npm ci'
+        }
+    }
         }
 
 
