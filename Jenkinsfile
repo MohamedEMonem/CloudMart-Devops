@@ -26,47 +26,51 @@ pipeline {
             }
         }
 
-
-        stage('Install Test Dependencies') {
+        // Parent stage to handle all Node.js execution inside a single container
+        stage('Node.js Environment') {
             agent {
                 docker { 
                     image 'node:18-alpine' 
                     reuseNode true
                 }
             }
-            steps {
-                dir('tests') {
-                    sh 'npm ci --cache .npm-cache'
-                }
-            }
-        }
-
-
-        stage('Run Tests') {
-            agent {
-                docker { 
-                    image 'node:18-alpine' 
-                    reuseNode true
-                }
-            }
-            parallel {
-                stage('Unit Tests') {
+            stages {
+                stage('Install Test Dependencies') {
                     steps {
                         dir('tests') {
-                            sh 'npx jest tests/unit --verbose --ci --forceExit'
+                            sh 'npm ci --cache .npm-cache'
                         }
                     }
                 }
-                stage('Infrastructure Tests') {
+                
+                stage('Run Tests') {
+                    parallel {
+                        stage('Unit Tests') {
+                            steps {
+                                dir('tests') {
+                                    sh 'npx jest tests/unit --verbose --ci --forceExit'
+                                }
+                            }
+                        }
+                        stage('Infrastructure Tests') {
+                            steps {
+                                dir('tests') {
+                                    sh 'npx jest tests/infrastructure --verbose --ci --forceExit'
+                                }
+                            }
+                        }
+                    }
+                }
+
+                stage('Integration Tests') {
                     steps {
                         dir('tests') {
-                            sh 'npx jest tests/infrastructure --verbose --ci --forceExit'
+                            sh 'npx jest tests/integration --verbose --ci --runInBand --forceExit'
                         }
                     }
                 }
             }
         }
-
 
         stage('Build Docker Images') {
             parallel {
@@ -113,7 +117,6 @@ pipeline {
             }
         }
 
-
         stage('Push Docker Images') {
             steps {
                 script {
@@ -142,7 +145,6 @@ pipeline {
             }
         }
 
-
         stage('Terraform Plan') {
             steps {
                 withCredentials([
@@ -164,7 +166,6 @@ pipeline {
             }
         }
 
-
         stage('Terraform Apply') {
             steps {
                 input message: 'Apply Terraform changes to production?', ok: 'Deploy Infrastructure'
@@ -179,7 +180,6 @@ pipeline {
                 }
             }
         }
-
         
         stage('Deploy to Kubernetes') {
             steps {
@@ -238,21 +238,6 @@ pipeline {
                             -n ${K8S_NAMESPACE} \
                             --timeout=180s || true
                     """
-                }
-            }
-        }
-
-
-        stage('Integration Tests') {
-            agent {
-                docker { 
-                    image 'node:18-alpine' 
-                    reuseNode true
-                }
-            }
-            steps {
-                dir('tests') {
-                    sh 'npx jest tests/integration --verbose --ci --runInBand --forceExit'
                 }
             }
         }
