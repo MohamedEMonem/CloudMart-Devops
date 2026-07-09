@@ -82,11 +82,26 @@ pipeline {
                     }
                 }
 
-                stage('Integration Tests') {
-                    steps {
-                        dir('tests') {
-                            sh 'npx jest integration --preset ts-jest --verbose --ci --runInBand --forceExit'
-                        }
+            }
+        }
+
+        stage('Integration Tests') {
+            steps {
+                script {
+                    try {
+                        sh 'docker compose up -d --build'
+                        sh 'sleep 60'
+                        sh 'docker compose ps'
+                        sh '''
+                            docker run --rm \
+                                --network ecommerce-net \
+                                -v "${PWD}:/app" \
+                                -w /app/tests \
+                                node:18-alpine \
+                                sh -c "npm ci --cache .npm-cache && API_URL=http://api-gateway:3000 npx jest integration --preset ts-jest --verbose --ci --runInBand --forceExit"
+                        '''
+                    } finally {
+                        sh 'docker compose down -v || true'
                     }
                 }
             }
