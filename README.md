@@ -1,39 +1,30 @@
-# Team Members & responsibilities
+# CloudMart-Devops
 
-<table>
-  <thead>
-    <tr>
-      <th>Task</th>
-      <th>Assigned to</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr><td>Ansible</td><td>Mohamed Essam</td></tr>
-    <tr><td>Maintain backend code</td><td>Marwan Sherif/ Essam</td></tr>
-    <tr><td>Terraform</td><td>Marwan Sherif</td></tr>
-    <tr><td>Maintain frontend code</td><td>Habiba ehab</td></tr>
-    <tr><td>Kubernetes</td><td>Habiba ehab / Tahany Edress</td></tr>
-    <tr><td>Dockerization</td><td>Tahany Edress</td></tr>
-    <tr><td>Nginx</td><td>Tahany Edress</td></tr>
-    <tr><td>Prometheus / Grafana</td><td>Mahmoud Tayar</td></tr>
-    <tr><td>CI/CD</td><td>Youssef Wali</td></tr>
-    <tr><td>Create test cases</td><td>Youssef Wali</td></tr>
-    <tr><td>Automated rollback</td><td>Included in (CI/CD, Artifact, Kubernetes)</td></tr>
-    <tr><td>Git repository Moderation</td><td>Mohamed Essam / Team contribution</td></tr>
-  </tbody>
-</table>
+## Team Members & responsibilities
+
+| Task | Assigned to |
+| --- | --- |
+| Ansible Configuration & monitoring | Mohamed Essam |
+| Maintain backend code | Marwan Sherif/ Essam |
+| Terraform | Marwan Sherif |
+| Maintain frontend code | Habiba ehab |
+| Kubernetes | Habiba ehab / Tahany Edress |
+| Dockerization | Tahany Edress |
+| Nginx | Tahany Edress |
+| CI/CD | Youssef Wali |
+| Create test cases | Youssef Wali |
+| Automated rollback | Included in (CI/CD, Artifact, Kubernetes) |
+| Git repository Moderation | Mohamed Essam / Team contribution |
 
 ## supervised by Eng.Ahmed Gamil
 
-
-
-# E-Commerce Microservices — Phase 1: Bounded Contexts
+## E-Commerce Microservices — Phase 1: Bounded Contexts
 
 A scalable e-commerce platform built with **Domain-Driven Design (DDD)** and a strict **microservices architecture**.
 
 ## Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                        API Gateway / Client                     │
 └───────┬──────┬──────┬──────┬──────┬──────┬──────────────────────┘
@@ -52,7 +43,7 @@ A scalable e-commerce platform built with **Domain-Driven Design (DDD)** and a s
 ## Services
 
 | Port | Service | Stack | Database |
-|------|---------|-------|----------|
+| --- | --- | --- | --- |
 | 3001 | Identity & User | NestJS + Prisma | PostgreSQL (:5433) |
 | 3002 | Product Catalog | NestJS + Mongoose | MongoDB (:27018) |
 | 3003 | Inventory | NestJS + Prisma | PostgreSQL (:5434) |
@@ -75,5 +66,3 @@ docker-compose up identity-db catalog-db inventory-db cart-redis order-db
 - **Database per Service**: No two services share a database
 - **API Contracts**: Services communicate via REST APIs, never by direct DB access
 - **Bounded Contexts**: Each service owns its domain and data
-# CloudMart-Devops
-This project automates e-commerce microservices deployment using Docker and Kubernetes. It features a full CI/CD pipeline with scalable AWS infrastructure via Terraform. Real-time monitoring ensures zero downtime and high availability.
