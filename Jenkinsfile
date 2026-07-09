@@ -92,14 +92,13 @@ pipeline {
                         sh 'docker compose up -d --build'
                         sh 'sleep 60'
                         sh 'docker compose ps'
-                        sh '''
-                            docker run --rm \
-                                --network ecommerce-net \
-                                -v "${PWD}:/app" \
-                                -w /app/tests \
-                                node:18-alpine \
-                                sh -c "npm ci --cache .npm-cache && API_URL=http://api-gateway:3000 npx jest integration --preset ts-jest --verbose --ci --runInBand --forceExit"
-                        '''
+                        sh """
+                        docker run --rm --network ecommerce-net \
+                        -v "${WORKSPACE}:/app" \
+                        -w /app/tests \
+                        node:18-alpine \
+                        sh -c "apk add --no-cache python3 make g++ && npm ci --cache .npm-cache && API_URL=http://api-gateway:3000 npx jest integration --preset ts-jest --verbose --ci --runInBand --forceExit"
+                    """
                     } finally {
                         sh 'docker compose down -v || true'
                     }
