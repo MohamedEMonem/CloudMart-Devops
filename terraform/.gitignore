@@ -1,3 +1,3 @@
-secert.tfvars
+secret.tfvars
 
 .terraform/*
