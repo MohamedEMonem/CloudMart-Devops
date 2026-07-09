@@ -5,18 +5,20 @@
  * by mocking PrismaService and JwtService dependencies.
  */
 
+import 'reflect-metadata';
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
+const bcrypt = require('../../../services/identity-service/node_modules/bcrypt');
 
-jest.mock('bcrypt', () => ({
+jest.mock('../../../services/identity-service/node_modules/bcrypt', () => ({
   hash: jest.fn(),
   compare: jest.fn(),
 }));
 
-import * as bcrypt from 'bcrypt';
-
 import { AuthService } from '../../../services/identity-service/src/auth/auth.service';
 import { PrismaService } from '../../../services/identity-service/src/common/prisma/prisma.service';
+
+const ExpectedJwtService = Reflect.getMetadata('design:paramtypes', AuthService)[1];
 
 // ───────────────────────────────────────────────────────
 // Mocks
@@ -52,7 +54,7 @@ describe('AuthService', () => {
           useValue: mockPrismaService,
         },
         {
-          provide: JwtService,
+          provide: ExpectedJwtService,
           useValue: mockJwtService,
         },
       ],
