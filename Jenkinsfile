@@ -222,11 +222,18 @@ pipeline {
                     string(credentialsId: 'aws-access-key-id',     variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'aws-secret-access-key',     variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
+                    script {
+                        env.EKS_CLUSTER_NAME = sh(
+                            script: "cd ${TERRAFORM_DIR} && terraform output -raw eks-cluster_name",
+                            returnStdout: true
+                        ).trim()
+                        echo "Resolved EKS cluster name from Terraform output: ${env.EKS_CLUSTER_NAME}"
+                    }
                     sh """
                         # Configure kubectl to talk to EKS
                         aws eks update-kubeconfig \
                             --region ${AWS_REGION} \
-                            --name cloudmart-prod-cluster
+                            --name ${env.EKS_CLUSTER_NAME}
 
                         # Apply base resources
                         kubectl apply -f k8s/base/namespace.yaml
@@ -285,7 +292,7 @@ pipeline {
                 docker image prune -f --filter "label=maintainer=cloudmart" || true
             '''
 
-            cleanWs()
+cleanWs(patterns: [[pattern: '.npm-cache/**', type: 'EXCLUDE']])
         }
 
         success {
