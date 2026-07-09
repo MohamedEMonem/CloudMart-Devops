@@ -12,7 +12,7 @@ pipeline {
 
     options {
         timestamps()
-        timeout(time: 60, unit: 'MINUTES')
+        timeout(time: 180, unit: 'MINUTES')
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
@@ -220,6 +220,15 @@ pipeline {
                     }
                 }
             }
+        }
+
+        stage('ansbile configuration'){
+
+            
+
+
+
+
         }
 
         // -----------------------------------------------------------------------
