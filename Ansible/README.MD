@@ -1,6 +1,6 @@
 # Infrastructure Configuration (Ansible)
 
-This directory contains the Ansible playbooks used to configure our AWS EKS cluster and deploy essential cluster-level tooling for the e-commerce platform.
+This directory contains the Ansible playbooks used to configure our AWS EKS cluster and deploy essential cluster-level tooling for the CloudMart e-commerce platform.
 
 ---
 
