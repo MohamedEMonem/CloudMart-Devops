@@ -237,13 +237,18 @@ describe('Kubernetes Manifests', () => {
     'product-catalog-service.yaml',
   ];
 
-  const databaseManifests = [
+  // In-cluster infrastructure still deployed as pods
+  const inClusterInfraManifests = [
+    'cart-redis.yaml',
+    'rabbitmq.yaml',
+  ];
+
+  // DB pod manifests archived after RDS/DocumentDB migration
+  const archivedDbManifests = [
     'identity-db.yaml',
     'catalog-db.yaml',
     'inventory-db.yaml',
     'order-db.yaml',
-    'cart-redis.yaml',
-    'rabbitmq.yaml',
   ];
 
   describe('Service Manifests', () => {
@@ -301,8 +306,8 @@ describe('Kubernetes Manifests', () => {
     }
   });
 
-  describe('Database Manifests', () => {
-    for (const manifest of databaseManifests) {
+  describe('In-Cluster Infrastructure Manifests', () => {
+    for (const manifest of inClusterInfraManifests) {
       it(`${manifest} should exist and be valid YAML`, () => {
         const content = fs.readFileSync(path.join(k8sDatabasesDir, manifest), 'utf-8');
         const docs = yaml.loadAll(content) as any[];
@@ -310,6 +315,38 @@ describe('Kubernetes Manifests', () => {
         expect(docs.length).toBeGreaterThanOrEqual(1);
       });
     }
+  });
+
+  describe('RDS Migration — DB Manifests Archived', () => {
+    // These files must NOT exist in k8s/databases/ — they were intentionally
+    // archived to k8s/databases/archived/ after migrating to AWS RDS/DocumentDB.
+    // Presence in the main directory would cause kubectl to deploy orphaned pods.
+    for (const manifest of archivedDbManifests) {
+      it(`${manifest} should be archived (not in active databases dir)`, () => {
+        const activePath = path.join(k8sDatabasesDir, manifest);
+        const archivedPath = path.join(k8sDatabasesDir, 'archived', manifest);
+        expect(fs.existsSync(activePath)).toBe(false);
+        expect(fs.existsSync(archivedPath)).toBe(true);
+      });
+    }
+
+    it('service manifests should use secretKeyRef for DATABASE_URL (not inline hostnames)', () => {
+      const dbServices = ['identity-service', 'order-service', 'inventory-service'];
+      for (const svc of dbServices) {
+        const content = fs.readFileSync(path.join(k8sServicesDir, `${svc}.yaml`), 'utf-8');
+        expect(content).toContain('secretKeyRef');
+        expect(content).toContain('DATABASE_URL');
+        // Ensure old in-cluster hostname pattern is gone
+        expect(content).not.toMatch(/@identity-db:|@order-db:|@inventory-db:/);
+      }
+    });
+
+    it('product-catalog-service should use secretKeyRef for MONGODB_URI (not inline catalog-db hostname)', () => {
+      const content = fs.readFileSync(path.join(k8sServicesDir, 'product-catalog-service.yaml'), 'utf-8');
+      expect(content).toContain('secretKeyRef');
+      expect(content).toContain('MONGODB_URI');
+      expect(content).not.toContain('@catalog-db:');
+    });
   });
 
   it('HPA manifest should exist and define autoscaling policies', () => {
