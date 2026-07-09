@@ -97,7 +97,7 @@ describe('PaymentsService', () => {
           paymentMethod: 'bitcoin',
           gatewayToken: 'btc-token',
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow('Unsupported payment method');
     });
   });
 

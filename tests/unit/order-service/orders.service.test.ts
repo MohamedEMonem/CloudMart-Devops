@@ -79,7 +79,7 @@ describe('OrdersService', () => {
     it('should throw NotFoundException when order does not exist', async () => {
       mockPrismaService.order.findUnique.mockResolvedValue(null);
 
-      await expect(service.findById('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.findById('nonexistent')).rejects.toThrow('Order not found');
     });
   });
 
@@ -157,7 +157,7 @@ describe('OrdersService', () => {
 
       await expect(
         service.updateStatus('order-1', { status: OrderStatus.PENDING }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow('Cannot transition from');
     });
 
     it('should reject CANCELLED → CONFIRMED (terminal state)', async () => {
@@ -169,7 +169,7 @@ describe('OrdersService', () => {
 
       await expect(
         service.updateStatus('order-1', { status: OrderStatus.CONFIRMED }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow('Cannot transition from');
     });
 
     it('should throw NotFoundException for non-existent order', async () => {
@@ -177,7 +177,7 @@ describe('OrdersService', () => {
 
       await expect(
         service.updateStatus('nonexistent', { status: OrderStatus.CONFIRMED }),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow('Order not found');
     });
   });
 

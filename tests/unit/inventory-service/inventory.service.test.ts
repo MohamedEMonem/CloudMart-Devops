@@ -61,7 +61,7 @@ describe('InventoryService', () => {
     it('should throw NotFoundException when inventory item does not exist', async () => {
       mockPrismaService.inventoryItem.findUnique.mockResolvedValue(null);
 
-      await expect(service.getStock('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.getStock('nonexistent')).rejects.toThrow('Inventory item not found for this product');
     });
   });
 
@@ -110,14 +110,14 @@ describe('InventoryService', () => {
         quantityReserved: 0,
       });
 
-      await expect(service.reserveStock(reserveDto)).rejects.toThrow(BadRequestException);
+      await expect(service.reserveStock(reserveDto)).rejects.toThrow('Insufficient stock');
       expect(mockTx.inventoryItem.update).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when inventory item does not exist', async () => {
       mockTx.inventoryItem.findUnique.mockResolvedValue(null);
 
-      await expect(service.reserveStock(reserveDto)).rejects.toThrow(NotFoundException);
+      await expect(service.reserveStock(reserveDto)).rejects.toThrow('Inventory item not found');
     });
   });
 
@@ -161,7 +161,7 @@ describe('InventoryService', () => {
     it('should throw NotFoundException when releasing for non-existent product', async () => {
       mockTx.inventoryItem.findUnique.mockResolvedValue(null);
 
-      await expect(service.releaseStock(releaseDto)).rejects.toThrow(NotFoundException);
+      await expect(service.releaseStock(releaseDto)).rejects.toThrow('Inventory item not found');
     });
   });
 });

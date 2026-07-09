@@ -161,7 +161,7 @@ describe('ProductsService', () => {
         exec: jest.fn().mockResolvedValue(null),
       });
 
-      await expect(service.findById('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.findById('nonexistent')).rejects.toThrow('Product not found');
     });
   });
 

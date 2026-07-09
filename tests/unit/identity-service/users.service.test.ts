@@ -66,7 +66,7 @@ describe('UsersService', () => {
     it('should throw NotFoundException when user does not exist', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.findById('nonexistent-uuid')).rejects.toThrow(NotFoundException);
+      await expect(service.findById('nonexistent-uuid')).rejects.toThrow('User not found');
     });
   });
 

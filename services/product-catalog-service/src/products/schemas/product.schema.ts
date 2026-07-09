@@ -10,35 +10,35 @@ export class Product {
   // This is a cross-service reference (not a Mongoose ObjectId ref)
   // because Product Catalog must NOT query the Identity DB directly.
   @Prop({ required: true, index: true })
-  vendorId: string;
+  vendorId!: string;
 
   @Prop({ required: true, trim: true })
-  vendorName: string; // denormalized snapshot — avoids cross-service lookup on reads
+  vendorName!: string; // denormalized snapshot — avoids cross-service lookup on reads
 
   // ── Core product fields ─────────────────────────────────────────
   @Prop({ required: true, trim: true })
-  name: string;
+  name!: string;
 
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
-  slug: string;
+  slug!: string;
 
   @Prop({ required: true })
-  description: string;
+  description!: string;
 
   @Prop({ required: true, min: 0 })
-  price: number;
+  price!: number;
 
   @Prop({ type: [String], default: [] })
-  images: string[];
+  images!: string[];
 
   @Prop({ type: Types.ObjectId, ref: 'Category', required: true })
-  categoryId: Types.ObjectId;
+  categoryId!: Types.ObjectId;
 
   @Prop({ type: Object, default: {} })
-  attributes: Record<string, any>;
+  attributes!: Record<string, any>;
 
   @Prop({ default: true })
-  isActive: boolean;
+  isActive!: boolean;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

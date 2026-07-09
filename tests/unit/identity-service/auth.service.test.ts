@@ -6,10 +6,17 @@
  */
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService } from '../../../services/identity-service/node_modules/@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from '../../../services/identity-service/src/auth/auth.service';
 import { PrismaService } from '../../../services/identity-service/src/common/prisma/prisma.service';
+
+// Mock bcrypt at module level — native bcrypt properties are non-configurable
+// so jest.spyOn() fails with "Cannot redefine property"
+jest.mock('bcrypt', () => ({
+  hash: jest.fn(),
+  compare: jest.fn(),
+}));
 
 // ── Mocks ──────────────────────────────────────────────
 const mockPrismaService = {
@@ -37,6 +44,9 @@ describe('AuthService', () => {
 
     service = module.get<AuthService>(AuthService);
     jest.clearAllMocks();
+    // Restore default mock return values after clearAllMocks
+    (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
+    mockJwtService.sign.mockReturnValue('mock-jwt-token');
   });
 
   // ── Register ──────────────────────────────────────────
@@ -77,7 +87,7 @@ describe('AuthService', () => {
     it('should throw ConflictException if email already exists', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'existing-user' });
 
-      await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
+      await expect(service.register(registerDto)).rejects.toThrow('Email already registered');
       expect(mockPrismaService.user.create).not.toHaveBeenCalled();
     });
 
@@ -91,10 +101,10 @@ describe('AuthService', () => {
         role: 'CUSTOMER',
       });
 
-      const hashSpy = jest.spyOn(bcrypt, 'hash' as any);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
       await service.register(registerDto);
 
-      expect(hashSpy).toHaveBeenCalledWith(registerDto.password, 12);
+      expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.password, 12);
     });
   });
 
@@ -113,7 +123,7 @@ describe('AuthService', () => {
 
     it('should return access_token and user on valid credentials', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      jest.spyOn(bcrypt, 'compare' as any).mockResolvedValue(true);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       const result = await service.login(loginDto);
 
@@ -137,19 +147,19 @@ describe('AuthService', () => {
     it('should throw UnauthorizedException for non-existent email', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(loginDto)).rejects.toThrow('Invalid credentials');
     });
 
     it('should throw UnauthorizedException for invalid password', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      jest.spyOn(bcrypt, 'compare' as any).mockResolvedValue(false);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(loginDto)).rejects.toThrow('Invalid credentials');
     });
 
     it('should set JWT expiry to 900 seconds (15 minutes)', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      jest.spyOn(bcrypt, 'compare' as any).mockResolvedValue(true);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       const result = await service.login(loginDto);
 

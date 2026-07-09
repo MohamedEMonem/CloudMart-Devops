@@ -45,14 +45,14 @@ describe('JwtAuthMiddleware', () => {
   });
 
   it('should throw UnauthorizedException when Authorization header is missing', () => {
-    expect(() => middleware.use(mockReq, mockRes, mockNext)).toThrow(UnauthorizedException);
+    expect(() => middleware.use(mockReq, mockRes, mockNext)).toThrow('Missing or malformed Authorization header');
     expect(mockNext).not.toHaveBeenCalled();
   });
 
   it('should throw UnauthorizedException when Authorization header lacks Bearer prefix', () => {
     mockReq.headers.authorization = 'Basic some-token';
 
-    expect(() => middleware.use(mockReq, mockRes, mockNext)).toThrow(UnauthorizedException);
+    expect(() => middleware.use(mockReq, mockRes, mockNext)).toThrow('Missing or malformed Authorization header');
     expect(mockNext).not.toHaveBeenCalled();
   });
 
@@ -64,7 +64,7 @@ describe('JwtAuthMiddleware', () => {
     );
     mockReq.headers.authorization = `Bearer ${token}`;
 
-    expect(() => middleware.use(mockReq, mockRes, mockNext)).toThrow(UnauthorizedException);
+    expect(() => middleware.use(mockReq, mockRes, mockNext)).toThrow('Invalid or expired token');
   });
 
   it('should throw UnauthorizedException for a JWT signed with wrong secret', () => {
@@ -75,7 +75,7 @@ describe('JwtAuthMiddleware', () => {
     );
     mockReq.headers.authorization = `Bearer ${token}`;
 
-    expect(() => middleware.use(mockReq, mockRes, mockNext)).toThrow(UnauthorizedException);
+    expect(() => middleware.use(mockReq, mockRes, mockNext)).toThrow('Invalid or expired token');
   });
 
   it('should inject VENDOR role from JWT payload', () => {
