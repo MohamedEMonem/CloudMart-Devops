@@ -6,7 +6,7 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { JwtService } from '../../../services/identity-service/node_modules/@nestjs/jwt';
+import { JwtService } from '@nestjs/jwt';
 
 jest.mock('bcrypt', () => ({
   hash: jest.fn(),
@@ -17,6 +17,7 @@ import * as bcrypt from 'bcrypt';
 
 import { AuthService } from '../../../services/identity-service/src/auth/auth.service';
 import { PrismaService } from '../../../services/identity-service/src/common/prisma/prisma.service';
+
 // ───────────────────────────────────────────────────────
 // Mocks
 // ───────────────────────────────────────────────────────
@@ -43,7 +44,7 @@ describe('AuthService', () => {
 
     mockJwtService.sign.mockReturnValue('mock-jwt-token');
 
-    const module = await Test.createTestingModule({
+    const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         {
@@ -57,11 +58,7 @@ describe('AuthService', () => {
       ],
     }).compile();
 
-    service = module.get(AuthService);
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
+    service = module.get<AuthService>(AuthService);
   });
 
   // ─────────────────────────────────────────────────────
@@ -146,11 +143,7 @@ describe('AuthService', () => {
       await service.register(registerDto);
 
       expect(bcrypt.hash).toHaveBeenCalledTimes(1);
-
-      expect(bcrypt.hash).toHaveBeenCalledWith(
-        registerDto.password,
-        12,
-      );
+      expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.password, 12);
     });
   });
 
