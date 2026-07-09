@@ -1,68 +1,86 @@
-# Ansible Setup & Execution Guide
+# Infrastructure Configuration (Ansible)
 
-### 1. What is Ansible?
+This directory contains the Ansible playbooks used to configure our AWS EKS cluster and deploy essential cluster-level tooling for the e-commerce platform.
 
-Ansible is an open-source, IT automation engine used for configuration management, application deployment, and task automation. It allows you to define your system state using YAML files (called **Playbooks**).
+---
 
-Its biggest advantage is that it is **agentless**. Unlike other tools that require you to install software on your target servers, Ansible connects directly via SSH and executes tasks, making it incredibly lightweight and secure.
+## What is Ansible?
 
-### 2. What does it do *here*?
+Ansible is an open-source IT automation engine that automates provisioning, configuration management, application deployment, and orchestration. It is agentless, meaning it doesn't require any software to be installed on the target nodes—it simply communicates over SSH or standard APIs to execute tasks.
 
-In the context of the CloudMart infrastructure, Ansible picks up exactly where Terraform leaves off.
+## What does Ansible do in this project?
 
-While you use Terraform to physically provision the raw hardware on AWS (like creating VPCs, Security Groups, EC2 instances, or EKS clusters), those servers are just blank slates. Ansible connects to those newly created servers and configures the operating systems.
+While Terraform provisions our physical AWS hardware (VPC, EKS, RDS) and Jenkins handles our CI/CD application deployments, **Ansible bridges the gap**.
 
-For example, it might:
+In the e-commerce architecture, Ansible is strictly responsible for configuring the Kubernetes cluster immediately after it is provisioned. Specifically, the `setup-infrastructure.yml` playbook performs the following:
 
-* Install necessary packages (like Docker, kubelet, or Nginx).
-* Apply security patches and create required user accounts.
-* Pull your application code or container images and start the services.
-* Ensure the environment matches the exact desired state defined in your playbooks.
+1. Installs the **Nginx Ingress Controller** to handle external traffic routing.
+2. Creates the `monitoring` namespace.
+3. Deploys the **Kube-Prometheus-Stack** (Prometheus & Grafana) via Helm for full system observability.
 
-### 3. Prerequisites Before Running
+---
 
-Before executing any playbooks, ensure the following are set up within your Ubuntu WSL environment:
+## Prerequisites
 
-* **Python:** Ansible is written in Python and requires it to run.
-* **Ansible Installed:** You can install it via the package manager (`sudo apt update && sudo apt install ansible`) or via Python's package manager (`pip install ansible`).
-* **SSH Access:** Because Ansible is agentless, your local machine needs SSH access to the target AWS instances. You must have the correct `.pem` key (or SSH public keys configured) and the correct permissions (`chmod 400 your-key.pem`).
-* **An Inventory File:** This is a file (often `inventory.ini` or `hosts.yml`) that lists the IP addresses of the servers Terraform just created, grouped by their roles (e.g., `[webservers]`, `[dbservers]`).
+Before running Ansible, your local environment must have the following tools installed and authenticated:
 
-### 4. How to Run
+1. **AWS Infrastructure:** The EKS cluster must already be provisioned via our Terraform scripts.
+2. **AWS CLI:** Installed and authenticated with active credentials (`aws sts get-caller-identity`).
+3. **Kubectl:** Installed to communicate with the cluster.
+4. **Helm:** Installed locally (`helm version`).
+5. **Ansible & Dependencies:** ```bash
+   sudo apt update
+   sudo apt install ansible python3-kubernetes -y
+   ansible-galaxy collection install kubernetes.core```
 
-Once your prerequisites are met, you interact with Ansible entirely through the command line.
+---
 
-**Step A: Test the Connection**
-Before running a massive playbook, verify that Ansible can securely connect to all the servers listed in your inventory file.
+## How to Run Ansible
+
+### Step 1: Authenticate with the EKS Cluster
+
+Generate your localized `kubeconfig` to allow Ansible to speak to the AWS cluster:
 
 ```bash
-ansible all -i inventory.ini -m ping --private-key=/path/to/your-key.pem
+aws eks update-kubeconfig --region us-east-1 --name cloudmart-cluster-prod
 
 ```
 
-*(If successful, you will receive a `pong` response from the target servers).*
+### Step 2: Ensure the Inventory Exists
 
-**Step B: Check the Syntax**
-Always validate your YAML syntax before applying it to avoid failing halfway through a deployment.
+Ansible requires an inventory file, even for local executions. Ensure `inventory.ini` exists in the Ansible directory:
 
-```bash
-ansible-playbook playbook.yml --syntax-check
-
-```
-
-**Step C: Execute the Playbook**
-Run the playbook to configure your infrastructure.
-
-```bash
-ansible-playbook -i inventory.ini playbook.yml --private-key=/path/to/your-key.pem
+```ini
+# inventory.ini
+[local]
+localhost ansible_connection=local
 
 ```
 
-*(Tip: Add the `--check` flag at the end of that command to perform a "Dry Run," which shows you what would change without actually making any modifications).*
+### Step 3: Execute the Playbook
 
-### 5. Documentation
+Run the infrastructure setup playbook:
 
-For deep dives into specific modules, variables, and advanced playbook structures, refer to the official documentation:
+```bash
+ansible-playbook -i inventory.ini setup-infrastructure.yml
 
-* **Main Documentation:** [https://docs.ansible.com/](https://docs.ansible.com/)
-* **User Guide:** [https://docs.ansible.com/ansible/latest/user_guide/index.html](https://docs.ansible.com/ansible/latest/user_guide/index.html)
+```
+
+---
+
+## Troubleshooting
+
+**Error: `401 Unauthorized` when running the playbook**
+AWS EKS uses short-lived tokens (15 minutes). If you encounter an unauthorized error, your token has likely expired.
+
+* **Fix:** Re-run the `aws eks update-kubeconfig ...` command to generate a fresh token, then immediately run the playbook.
+* **WSL Users:** If you are using Windows Subsystem for Linux (WSL), your internal clock may have drifted after waking from sleep, which invalidates AWS tokens. Run `sudo hwclock -s` to sync your clock, regenerate your kubeconfig, and try again.
+
+---
+
+## Official Documentation
+
+For more advanced configurations or module syntax, refer to the official documentation:
+
+* [Ansible Official Documentation](https://docs.ansible.com/)
+* [Ansible Kubernetes Core Collection](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/index.html)
