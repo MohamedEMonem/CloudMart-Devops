@@ -15,19 +15,20 @@ spec:
     spec:
       containers:
         - name: identity-service
-          image: marwanmw/cloudmart-identity-service  
+          image: marwanmw/cloudmart-identity-service
           ports:
             - containerPort: 3000
           env:
             - name: PORT
               value: "3000"
             - name: DATABASE_URL
-              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@identity-db:5432/$(POSTGRES_DB)"
+              valueFrom:
+                secretKeyRef:
+                  name: identity-db-secret
+                  key: DATABASE_URL
             - name: JWT_EXPIRES_IN
               value: "15m"
           envFrom:
-            - secretRef:
-                name: identity-db-secret
             - secretRef:
                 name: jwt-secret
           readinessProbe:
