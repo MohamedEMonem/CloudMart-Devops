@@ -107,42 +107,42 @@ pipeline {
         }
         stage('Build Docker Images') {
             parallel {
-                stage('Build api-gateway') {
+                stage('api-gateway') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-api-gateway:${IMAGE_TAG} services/api-gateway"
                     }
                 }
-                stage('Build identity-service') {
+                stage('identity-service') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-identity-service:${IMAGE_TAG} services/identity-service"
                     }
                 }
-                stage('Build product-catalog-service') {
+                stage('product-catalog-service') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-product-catalog-service:${IMAGE_TAG} services/product-catalog-service"
                     }
                 }
-                stage('Build inventory-service') {
+                stage('inventory-service') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-inventory-service:${IMAGE_TAG} services/inventory-service"
                     }
                 }
-                stage('Build cart-service') {
+                stage('cart-service') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-cart-service:${IMAGE_TAG} services/cart-service"
                     }
                 }
-                stage('Build order-service') {
+                stage('order-service') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-order-service:${IMAGE_TAG} services/order-service"
                     }
                 }
-                stage('Build payment-service') {
+                stage('payment-service') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-payment-service:${IMAGE_TAG} services/payment-service"
                     }
                 }
-                stage('Build frontend') {
+                stage('frontend') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-frontend:${IMAGE_TAG} cloudmart-frontend"
                     }
@@ -151,32 +151,34 @@ pipeline {
         }
 
         stage('Push Docker Images') {
-            steps {
-                script {
-                    def services = [
-                        'api-gateway',
-                        'identity-service',
-                        'product-catalog-service',
-                        'inventory-service',
-                        'cart-service',
-                        'order-service',
-                        'payment-service',
-                        'frontend'
-                    ]
+    steps {
+        withCredentials([
+            usernamePassword(
+                credentialsId: 'dockerhub-creds',
+                usernameVariable: 'DOCKER_USER',
+                passwordVariable: 'DOCKER_PASS'
+            )
+        ]) {
+            sh '''
+                echo "$DOCKER_PASS" | docker login \
+                    --username "$DOCKER_USER" \
+                    --password-stdin
 
-                    docker.withRegistry("https://${DOCKER_REGISTRY}", 'dockerhub-creds') {
-                        for (svc in services) {
-                            def imageName = "${DOCKERHUB_USER}/cloudmart-${svc}"
-                            sh """
-                                docker tag  ${imageName}:${IMAGE_TAG} ${imageName}:latest
-                                docker push ${imageName}:${IMAGE_TAG}
-                                docker push ${imageName}:latest
-                            """
-                        }
-                    }
-                }
-            }
+                SERVICES="api-gateway identity-service product-catalog-service inventory-service cart-service order-service payment-service frontend"
+
+                for svc in $SERVICES; do
+                    imageName="marwanmw/cloudmart-$svc"
+
+                    docker tag ${imageName}:${IMAGE_TAG} ${imageName}:latest
+                    docker push ${imageName}:${IMAGE_TAG}
+                    docker push ${imageName}:latest
+                done
+
+                docker logout
+            '''
         }
+    }
+}
 
         stage('Terraform Plan') {
             steps {
@@ -220,11 +222,18 @@ pipeline {
                     string(credentialsId: 'aws-access-key-id',     variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'aws-secret-access-key',     variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
+                    script {
+                        env.EKS_CLUSTER_NAME = sh(
+                            script: "cd ${TERRAFORM_DIR} && terraform output -raw eks-cluster_name",
+                            returnStdout: true
+                        ).trim()
+                        echo "Resolved EKS cluster name from Terraform output: ${env.EKS_CLUSTER_NAME}"
+                    }
                     sh """
                         # Configure kubectl to talk to EKS
                         aws eks update-kubeconfig \
                             --region ${AWS_REGION} \
-                            --name cloudmart-prod-cluster
+                            --name ${env.EKS_CLUSTER_NAME}
 
                         # Apply base resources
                         kubectl apply -f k8s/base/namespace.yaml
@@ -283,7 +292,7 @@ pipeline {
                 docker image prune -f --filter "label=maintainer=cloudmart" || true
             '''
 
-            cleanWs()
+cleanWs(patterns: [[pattern: '.npm-cache/**', type: 'EXCLUDE']])
         }
 
         success {
