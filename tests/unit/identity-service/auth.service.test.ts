@@ -37,8 +37,13 @@ describe('AuthService', () => {
 
     service = module.get<AuthService>(AuthService);
     jest.clearAllMocks();
+    
     // Restore default mock return values after clearAllMocks
     mockJwtService.sign.mockReturnValue('mock-jwt-token');
+    
+    // Mocking Bcrypt globally for the suite
+    jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashedPass' as never);
+    jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
   });
 
   // ── Register ──────────────────────────────────────────
