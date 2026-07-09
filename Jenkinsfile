@@ -48,14 +48,16 @@ pipeline {
                         stage('Unit Tests') {
                             steps {
                                 dir('tests') {
-                                    sh 'npx jest tests/unit --verbose --ci --forceExit'
+                                    // Removed 'tests/' prefix since we are already in dir('tests')
+                                    sh 'npx jest unit --verbose --ci --forceExit'
                                 }
                             }
                         }
                         stage('Infrastructure Tests') {
                             steps {
                                 dir('tests') {
-                                    sh 'npx jest tests/infrastructure --verbose --ci --forceExit'
+                                    // Removed 'tests/' prefix
+                                    sh 'npx jest infrastructure --verbose --ci --forceExit'
                                 }
                             }
                         }
@@ -65,13 +67,13 @@ pipeline {
                 stage('Integration Tests') {
                     steps {
                         dir('tests') {
-                            sh 'npx jest tests/integration --verbose --ci --runInBand --forceExit'
+                            // Removed 'tests/' prefix
+                            sh 'npx jest integration --verbose --ci --runInBand --forceExit'
                         }
                     }
                 }
             }
         }
-
         stage('Build Docker Images') {
             parallel {
                 stage('Build api-gateway') {
