@@ -107,42 +107,42 @@ pipeline {
         }
         stage('Build Docker Images') {
             parallel {
-                stage('Build api-gateway') {
+                stage('api-gateway') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-api-gateway:${IMAGE_TAG} services/api-gateway"
                     }
                 }
-                stage('Build identity-service') {
+                stage('identity-service') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-identity-service:${IMAGE_TAG} services/identity-service"
                     }
                 }
-                stage('Build product-catalog-service') {
+                stage('product-catalog-service') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-product-catalog-service:${IMAGE_TAG} services/product-catalog-service"
                     }
                 }
-                stage('Build inventory-service') {
+                stage('inventory-service') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-inventory-service:${IMAGE_TAG} services/inventory-service"
                     }
                 }
-                stage('Build cart-service') {
+                stage('cart-service') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-cart-service:${IMAGE_TAG} services/cart-service"
                     }
                 }
-                stage('Build order-service') {
+                stage('order-service') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-order-service:${IMAGE_TAG} services/order-service"
                     }
                 }
-                stage('Build payment-service') {
+                stage('payment-service') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-payment-service:${IMAGE_TAG} services/payment-service"
                     }
                 }
-                stage('Build frontend') {
+                stage('frontend') {
                     steps {
                         sh "docker build -t ${DOCKERHUB_USER}/cloudmart-frontend:${IMAGE_TAG} cloudmart-frontend"
                     }
@@ -167,11 +167,11 @@ pipeline {
                 SERVICES="api-gateway identity-service product-catalog-service inventory-service cart-service order-service payment-service frontend"
 
                 for svc in $SERVICES; do
-                    IMAGE="marwanmw/cloudmart-$svc"
+                    imageName="marwanmw/cloudmart-$svc"
 
-                    docker tag ${IMAGE}:${IMAGE_TAG} ${IMAGE}:latest
-                    docker push ${IMAGE}:${IMAGE_TAG}
-                    docker push ${IMAGE}:latest
+                    docker tag ${imageName}:${IMAGE_TAG} ${imageName}:latest
+                    docker push ${imageName}:${IMAGE_TAG}
+                    docker push ${imageName}:latest
                 done
 
                 docker logout
