@@ -425,8 +425,8 @@ describe('Jenkinsfile CI/CD Pipeline', () => {
     expect(jenkinsfile).toContain('checkout scm');
   });
 
-  it('should have Build & Push Images stage', () => {
-    expect(jenkinsfile).toContain("stage('Build & Push Images')");
+  it('should have Build Docker Images stage', () => {
+    expect(jenkinsfile).toContain("stage('Build Docker Images')");
   });
 
   it('should build all 7 microservice images', () => {
@@ -447,7 +447,7 @@ describe('Jenkinsfile CI/CD Pipeline', () => {
 
   it('should push images with BUILD_NUMBER and latest tags', () => {
     expect(jenkinsfile).toContain('${BUILD_NUMBER}');
-    expect(jenkinsfile).toContain("img.push('latest')");
+    expect(jenkinsfile).toContain("docker push ${imageName}:latest");
   });
 
   it('should use DockerHub registry', () => {

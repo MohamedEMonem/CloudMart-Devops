@@ -9,6 +9,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { OrdersService } from '../../../services/order-service/src/orders/orders.service';
 import { PrismaService } from '../../../services/order-service/src/common/prisma/prisma.service';
 import { RealtimePublisher } from '../../../services/order-service/src/realtime/realtime-publisher.service';
+import { OrderStatus } from '../../../services/order-service/src/orders/dto/update-order-status.dto';
 
 const mockPrismaService = {
   order: {
@@ -118,7 +119,7 @@ describe('OrdersService', () => {
         updatedAt: new Date(),
       });
 
-      const result = await service.updateStatus('order-1', { status: 'CONFIRMED' });
+      const result = await service.updateStatus('order-1', { status: OrderStatus.CONFIRMED });
 
       expect(result.status).toBe('CONFIRMED');
       expect(mockRealtimePublisher.publishOrderStatusUpdate).toHaveBeenCalledWith(
@@ -142,7 +143,7 @@ describe('OrdersService', () => {
         updatedAt: new Date(),
       });
 
-      const result = await service.updateStatus('order-1', { status: 'CANCELLED' });
+      const result = await service.updateStatus('order-1', { status: OrderStatus.CANCELLED });
 
       expect(result.status).toBe('CANCELLED');
     });
@@ -155,7 +156,7 @@ describe('OrdersService', () => {
       });
 
       await expect(
-        service.updateStatus('order-1', { status: 'PENDING' }),
+        service.updateStatus('order-1', { status: OrderStatus.PENDING }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -167,7 +168,7 @@ describe('OrdersService', () => {
       });
 
       await expect(
-        service.updateStatus('order-1', { status: 'CONFIRMED' }),
+        service.updateStatus('order-1', { status: OrderStatus.CONFIRMED }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -175,7 +176,7 @@ describe('OrdersService', () => {
       mockPrismaService.order.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.updateStatus('nonexistent', { status: 'CONFIRMED' }),
+        service.updateStatus('nonexistent', { status: OrderStatus.CONFIRMED }),
       ).rejects.toThrow(NotFoundException);
     });
   });
