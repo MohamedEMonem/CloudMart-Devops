@@ -6,12 +6,17 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService } from '../../../services/identity-service/node_modules/@nestjs/jwt';
+
+jest.mock('bcrypt', () => ({
+  hash: jest.fn(),
+  compare: jest.fn(),
+}));
+
 import * as bcrypt from 'bcrypt';
 
 import { AuthService } from '../../../services/identity-service/src/auth/auth.service';
 import { PrismaService } from '../../../services/identity-service/src/common/prisma/prisma.service';
-
 // ───────────────────────────────────────────────────────
 // Mocks
 // ───────────────────────────────────────────────────────
@@ -30,15 +35,15 @@ const mockJwtService = {
 describe('AuthService', () => {
   let service: AuthService;
 
-  let hashSpy: jest.SpyInstance;
-  let compareSpy: jest.SpyInstance;
-
   beforeEach(async () => {
     jest.clearAllMocks();
 
+    (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPass');
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
     mockJwtService.sign.mockReturnValue('mock-jwt-token');
 
-    const module: TestingModule = await Test.createTestingModule({
+    const module = await Test.createTestingModule({
       providers: [
         AuthService,
         {
@@ -52,15 +57,7 @@ describe('AuthService', () => {
       ],
     }).compile();
 
-    service = module.get<AuthService>(AuthService);
-
-    hashSpy = jest
-      .spyOn(bcrypt, 'hash')
-      .mockResolvedValue('hashedPass' as never);
-
-    compareSpy = jest
-      .spyOn(bcrypt, 'compare')
-      .mockResolvedValue(true as never);
+    service = module.get(AuthService);
   });
 
   afterEach(() => {
@@ -104,7 +101,7 @@ describe('AuthService', () => {
         where: { email: registerDto.email },
       });
 
-      expect(hashSpy).toHaveBeenCalledWith(registerDto.password, 12);
+      expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.password, 12);
 
       expect(mockPrismaService.user.create).toHaveBeenCalledWith({
         data: {
@@ -148,9 +145,9 @@ describe('AuthService', () => {
 
       await service.register(registerDto);
 
-      expect(hashSpy).toHaveBeenCalledTimes(1);
+      expect(bcrypt.hash).toHaveBeenCalledTimes(1);
 
-      expect(hashSpy).toHaveBeenCalledWith(
+      expect(bcrypt.hash).toHaveBeenCalledWith(
         registerDto.password,
         12,
       );
@@ -179,11 +176,11 @@ describe('AuthService', () => {
     it('should return access_token and user on valid credentials', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
-      compareSpy.mockResolvedValue(true as never);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       const result = await service.login(loginDto);
 
-      expect(compareSpy).toHaveBeenCalledWith(
+      expect(bcrypt.compare).toHaveBeenCalledWith(
         loginDto.password,
         mockUser.passwordHash,
       );
@@ -217,7 +214,7 @@ describe('AuthService', () => {
     it('should throw UnauthorizedException for invalid password', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
-      compareSpy.mockResolvedValue(false as never);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(service.login(loginDto)).rejects.toThrow(
         'Invalid credentials',
@@ -227,7 +224,7 @@ describe('AuthService', () => {
     it('should set JWT expiry to 900 seconds (15 minutes)', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
-      compareSpy.mockResolvedValue(true as never);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       const result = await service.login(loginDto);
 
