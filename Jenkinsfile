@@ -151,32 +151,34 @@ pipeline {
         }
 
         stage('Push Docker Images') {
-            steps {
-                script {
-                    def services = [
-                        'api-gateway',
-                        'identity-service',
-                        'product-catalog-service',
-                        'inventory-service',
-                        'cart-service',
-                        'order-service',
-                        'payment-service',
-                        'frontend'
-                    ]
+    steps {
+        withCredentials([
+            usernamePassword(
+                credentialsId: 'dockerhub-creds',
+                usernameVariable: 'DOCKER_USER',
+                passwordVariable: 'DOCKER_PASS'
+            )
+        ]) {
+            sh '''
+                echo "$DOCKER_PASS" | docker login \
+                    --username "$DOCKER_USER" \
+                    --password-stdin
 
-                    docker.withRegistry("https://${DOCKER_REGISTRY}", 'dockerhub-creds') {
-                        for (svc in services) {
-                            def imageName = "${DOCKERHUB_USER}/cloudmart-${svc}"
-                            sh """
-                                docker tag  ${imageName}:${IMAGE_TAG} ${imageName}:latest
-                                docker push ${imageName}:${IMAGE_TAG}
-                                docker push ${imageName}:latest
-                            """
-                        }
-                    }
-                }
-            }
+                SERVICES="api-gateway identity-service product-catalog-service inventory-service cart-service order-service payment-service frontend"
+
+                for svc in $SERVICES; do
+                    IMAGE="marwanmw/cloudmart-$svc"
+
+                    docker tag ${IMAGE}:${IMAGE_TAG} ${IMAGE}:latest
+                    docker push ${IMAGE}:${IMAGE_TAG}
+                    docker push ${IMAGE}:latest
+                done
+
+                docker logout
+            '''
         }
+    }
+}
 
         stage('Terraform Plan') {
             steps {
