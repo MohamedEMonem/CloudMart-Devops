@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: api-gateway
-          image: wali23/cloudmart-api-gateway
+          image: marwanmw/cloudmart-api-gateway
           ports:
             - containerPort: 3000
           env:

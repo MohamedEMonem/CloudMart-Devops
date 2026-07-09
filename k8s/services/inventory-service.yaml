@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: inventory-service
-          image: wali23/cloudmart-inventory-service
+          image: marwanmw/cloudmart-inventory-service
           ports:
             - containerPort: 3000
           env:

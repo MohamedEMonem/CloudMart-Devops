@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: identity-service
-          image: wali23/cloudmart-identity-service  
+          image: marwanmw/cloudmart-identity-service  
           ports:
             - containerPort: 3000
           env:

@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: order-service
-          image: wali23/cloudmart-order-service
+          image: marwanmw/cloudmart-order-service
           ports:
             - containerPort: 3000
           env:

@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: payment-service
-          image: wali23/cloudmart-payment-service
+          image: marwanmw/cloudmart-payment-service
           ports:
             - containerPort: 3000
           env:

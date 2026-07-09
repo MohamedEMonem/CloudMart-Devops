@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: product-catalog-service
-          image: wali23/cloudmart-product-catalog-service
+          image: marwanmw/cloudmart-product-catalog-service
           ports:
             - containerPort: 3000
           env:
