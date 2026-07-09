@@ -35,14 +35,34 @@ pipeline {
                 }
             }
             stages {
-                stage('Install Test Dependencies') {
+               stage('Install Test Dependencies') {
                     steps {
+                        // 1. Install dependencies for the testing framework
                         dir('tests') {
                             sh 'npm ci --cache .npm-cache'
                         }
+                        
+                        // 2. Install dependencies for all microservices so TypeScript can compile
+                        sh '''
+                            echo "Installing microservice dependencies..."
+                            for svc in services/*/; do
+                                if [ -f "${svc}package.json" ]; then
+                                    echo "➔ Installing dependencies for ${svc}"
+                                    cd "${svc}"
+                                    # Use --no-audit and --no-fund to drastically speed up pipeline installation
+                                    npm install --no-audit --no-fund --cache ../../.npm-cache
+                                    
+                                    # If the service uses Prisma, generate the client so tests can use it
+                                    if grep -q "prisma" "package.json"; then
+                                        echo "➔ Generating Prisma client for ${svc}"
+                                        npx prisma generate || true
+                                    fi
+                                    cd ../..
+                                fi
+                            done
+                        '''
                     }
                 }
-                
                 stage('Run Tests') {
                     parallel {
                         stage('Unit Tests') {
