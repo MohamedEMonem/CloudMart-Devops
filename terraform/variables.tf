@@ -16,8 +16,30 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
-variable "db_password" {
-  description = "The master password for the PostgreSQL database"
+# ------------------------------------------------------------------------------
+# Per-service database passwords
+# Supply via TF_VAR_* env vars or -var flags — never commit real values here
+# ------------------------------------------------------------------------------
+variable "identity_db_password" {
+  description = "Master password for the identity-service PostgreSQL RDS instance"
   type        = string
-  sensitive   = true # This hides the password from showing up in your terminal logs
+  sensitive   = true
+}
+
+variable "order_db_password" {
+  description = "Master password for the order-service PostgreSQL RDS instance"
+  type        = string
+  sensitive   = true
+}
+
+variable "inventory_db_password" {
+  description = "Master password for the inventory-service PostgreSQL RDS instance"
+  type        = string
+  sensitive   = true
+}
+
+variable "catalog_db_password" {
+  description = "Master password for the product-catalog-service DocumentDB cluster"
+  type        = string
+  sensitive   = true
 }

@@ -22,12 +22,13 @@ spec:
             - name: PORT
               value: "3000"
             - name: DATABASE_URL
-              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@inventory-db:5432/$(POSTGRES_DB)"
+              valueFrom:
+                secretKeyRef:
+                  name: inventory-db-secret
+                  key: DATABASE_URL
             - name: RABBITMQ_URL
               value: "amqp://$(RABBITMQ_DEFAULT_USER):$(RABBITMQ_DEFAULT_PASS)@rabbitmq:5672"
           envFrom:
-            - secretRef:
-                name: inventory-db-secret
             - secretRef:
                 name: rabbitmq-secret
           readinessProbe:

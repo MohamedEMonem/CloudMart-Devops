@@ -183,9 +183,12 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'aws-access-key-id',     variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret-access-key',     variable: 'AWS_SECRET_ACCESS_KEY'),
-                    string(credentialsId: 'db-password',        variable: 'TF_VAR_db_password')
+                    string(credentialsId: 'aws-access-key-id',          variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key',       variable: 'AWS_SECRET_ACCESS_KEY'),
+                    string(credentialsId: 'identity-db-password',        variable: 'TF_VAR_identity_db_password'),
+                    string(credentialsId: 'order-db-password',           variable: 'TF_VAR_order_db_password'),
+                    string(credentialsId: 'inventory-db-password',       variable: 'TF_VAR_inventory_db_password'),
+                    string(credentialsId: 'catalog-db-password',         variable: 'TF_VAR_catalog_db_password')
                 ]) {
                     dir("${TERRAFORM_DIR}") {
                         sh '''
@@ -205,9 +208,12 @@ pipeline {
             steps {
                 input message: 'Apply Terraform changes to production?', ok: 'Deploy Infrastructure'
                 withCredentials([
-                    string(credentialsId: 'aws-access-key-id',     variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret-access-key',     variable: 'AWS_SECRET_ACCESS_KEY'),
-                    string(credentialsId: 'db-password',        variable: 'TF_VAR_db_password')
+                    string(credentialsId: 'aws-access-key-id',          variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key',       variable: 'AWS_SECRET_ACCESS_KEY'),
+                    string(credentialsId: 'identity-db-password',        variable: 'TF_VAR_identity_db_password'),
+                    string(credentialsId: 'order-db-password',           variable: 'TF_VAR_order_db_password'),
+                    string(credentialsId: 'inventory-db-password',       variable: 'TF_VAR_inventory_db_password'),
+                    string(credentialsId: 'catalog-db-password',         variable: 'TF_VAR_catalog_db_password')
                 ]) {
                     dir("${TERRAFORM_DIR}") {
                         sh 'terraform apply -auto-approve tfplan'
@@ -215,43 +221,108 @@ pipeline {
                 }
             }
         }
-        
-        stage('Deploy to Kubernetes') {
+
+        // -----------------------------------------------------------------------
+        // Read the real AWS endpoints from Terraform and inject them into K8s
+        // secrets dynamically — no placeholder editing required.
+        // -----------------------------------------------------------------------
+        stage('Inject RDS Endpoints into K8s Secrets') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'aws-access-key-id',     variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret-access-key',     variable: 'AWS_SECRET_ACCESS_KEY')
+                    string(credentialsId: 'aws-access-key-id',          variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key',       variable: 'AWS_SECRET_ACCESS_KEY'),
+                    string(credentialsId: 'identity-db-password',        variable: 'IDENTITY_DB_PASS'),
+                    string(credentialsId: 'order-db-password',           variable: 'ORDER_DB_PASS'),
+                    string(credentialsId: 'inventory-db-password',       variable: 'INVENTORY_DB_PASS'),
+                    string(credentialsId: 'catalog-db-password',         variable: 'CATALOG_DB_PASS')
                 ]) {
                     script {
-                        env.EKS_CLUSTER_NAME = sh(
-                            script: "cd ${TERRAFORM_DIR} && terraform output -raw eks-cluster_name",
-                            returnStdout: true
-                        ).trim()
-                        echo "Resolved EKS cluster name from Terraform output: ${env.EKS_CLUSTER_NAME}"
+                        dir("${TERRAFORM_DIR}") {
+                            // Capture all four endpoints from Terraform outputs
+                            env.RDS_IDENTITY_ENDPOINT  = sh(script: 'terraform output -raw rds_identity_endpoint',  returnStdout: true).trim()
+                            env.RDS_ORDER_ENDPOINT     = sh(script: 'terraform output -raw rds_order_endpoint',     returnStdout: true).trim()
+                            env.RDS_INVENTORY_ENDPOINT = sh(script: 'terraform output -raw rds_inventory_endpoint', returnStdout: true).trim()
+                            env.DOCDB_CATALOG_ENDPOINT = sh(script: 'terraform output -raw docdb_catalog_endpoint', returnStdout: true).trim()
+                            env.EKS_CLUSTER_NAME       = sh(script: 'terraform output -raw eks-cluster_name',       returnStdout: true).trim()
+                        }
+
+                        echo "Identity RDS  : ${env.RDS_IDENTITY_ENDPOINT}"
+                        echo "Order RDS     : ${env.RDS_ORDER_ENDPOINT}"
+                        echo "Inventory RDS : ${env.RDS_INVENTORY_ENDPOINT}"
+                        echo "Catalog DocDB : ${env.DOCDB_CATALOG_ENDPOINT}"
+                        echo "EKS Cluster   : ${env.EKS_CLUSTER_NAME}"
                     }
+
                     sh """
-                        # Configure kubectl to talk to EKS
+                        # Connect kubectl to EKS
                         aws eks update-kubeconfig \
                             --region ${AWS_REGION} \
                             --name ${env.EKS_CLUSTER_NAME}
 
-                        # Apply base resources
+                        # Ensure namespace exists
                         kubectl apply -f k8s/base/namespace.yaml
 
-                        # Apply secrets
+                        # ------------------------------------------------------------------
+                        # Dynamically create/update each DB secret with the real endpoint.
+                        # Using --dry-run=client | kubectl apply is idempotent — safe to
+                        # re-run on every pipeline execution.
+                        # ------------------------------------------------------------------
+
+                        kubectl create secret generic identity-db-secret \
+                            --namespace=${K8S_NAMESPACE} \
+                            --from-literal=DATABASE_URL="postgresql://identity_user:\${IDENTITY_DB_PASS}@${env.RDS_IDENTITY_ENDPOINT}/identity_db" \
+                            --dry-run=client -o yaml | kubectl apply -f -
+
+                        kubectl create secret generic order-db-secret \
+                            --namespace=${K8S_NAMESPACE} \
+                            --from-literal=DATABASE_URL="postgresql://order_user:\${ORDER_DB_PASS}@${env.RDS_ORDER_ENDPOINT}/order_db" \
+                            --dry-run=client -o yaml | kubectl apply -f -
+
+                        kubectl create secret generic inventory-db-secret \
+                            --namespace=${K8S_NAMESPACE} \
+                            --from-literal=DATABASE_URL="postgresql://inventory_user:\${INVENTORY_DB_PASS}@${env.RDS_INVENTORY_ENDPOINT}/inventory_db" \
+                            --dry-run=client -o yaml | kubectl apply -f -
+
+                        kubectl create secret generic catalog-db-secret \
+                            --namespace=${K8S_NAMESPACE} \
+                            --from-literal=MONGODB_URI="mongodb://catalog_user:\${CATALOG_DB_PASS}@${env.DOCDB_CATALOG_ENDPOINT}/catalog_db?tls=true&tlsCAFile=/etc/ssl/certs/global-bundle.pem&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false" \
+                            --dry-run=client -o yaml | kubectl apply -f -
+
+                        # Apply the remaining non-DB secrets (JWT, RabbitMQ, payment, Redis)
                         kubectl apply -f k8s/secrets/
 
-                        # Apply databases & infrastructure
+                        echo "✅ All K8s secrets injected with live AWS endpoints"
+                    """
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key-id',    variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh """
+                        # kubectl is already configured from the previous stage
+                        aws eks update-kubeconfig \
+                            --region ${AWS_REGION} \
+                            --name ${env.EKS_CLUSTER_NAME}
+
+                        # NOTE: k8s/databases/ now only contains in-cluster components:
+                        #   - cart-redis.yaml
+                        #   - rabbitmq.yaml
+                        # The 4 DB pod yamls were archived; RDS/DocDB are managed by Terraform.
                         kubectl apply -f k8s/databases/
 
-                        # Wait for databases to be ready
-                        echo "Waiting for database pods to become ready..."
+                        # Wait for in-cluster infrastructure (Redis, RabbitMQ) to be ready
+                        echo "Waiting for in-cluster infrastructure pods to become ready..."
                         kubectl wait --for=condition=ready pod \
-                            -l tier=database \
+                            -l tier=infrastructure \
                             -n ${K8S_NAMESPACE} \
                             --timeout=120s || true
 
-                        # Update service images to current build tag
+                        # Update service images to the current build tag
                         SERVICES="api-gateway identity-service product-catalog-service inventory-service cart-service order-service payment-service"
                         for svc in \$SERVICES; do
                             sed -i "s|image: ${DOCKERHUB_USER}/cloudmart-\${svc}.*|image: ${DOCKERHUB_USER}/cloudmart-\${svc}:${IMAGE_TAG}|g" \
@@ -269,7 +340,7 @@ pipeline {
                         # Apply HPA
                         kubectl apply -f k8s/services/hpa.yaml
 
-                        # Verify rollout status
+                        # Verify rollout status for all services
                         for svc in \$SERVICES; do
                             kubectl rollout status deployment/\${svc} \
                                 -n ${K8S_NAMESPACE} \

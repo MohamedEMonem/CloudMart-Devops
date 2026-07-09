@@ -22,10 +22,10 @@ spec:
             - name: PORT
               value: "3000"
             - name: MONGODB_URI
-              value: "mongodb://$(MONGO_INITDB_ROOT_USERNAME):$(MONGO_INITDB_ROOT_PASSWORD)@catalog-db:27017/$(MONGO_INITDB_DATABASE)?authSource=admin"
-          envFrom:
-            - secretRef:
-                name: catalog-db-secret
+              valueFrom:
+                secretKeyRef:
+                  name: catalog-db-secret
+                  key: MONGODB_URI
           readinessProbe:
             httpGet:
               path: api/v1/health

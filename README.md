@@ -8,7 +8,7 @@
 ![Jenkins](https://img.shields.io/badge/jenkins-%232C5263.svg?style=for-the-badge&logo=jenkins&logoColor=white)
 ![AWS](https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
 
-## Project Description (Project 4)
+## Project Description
 
 **Problem Addressed:** E-commerce websites often face downtime and require complex, highly coordinated deployments.
 

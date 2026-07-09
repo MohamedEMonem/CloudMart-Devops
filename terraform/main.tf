@@ -8,7 +8,7 @@ module "vpc" {
 }
 
 # ------------------------------------------------------------------------------
-# STEP 3: The Data Tier (RDS & S3)
+# STEP 3: The Data Tier (RDS PostgreSQL x3 + DocumentDB + S3)
 # ------------------------------------------------------------------------------
 module "rds" {
   source           = "./modules/rds"
@@ -16,7 +16,12 @@ module "rds" {
   vpc_id           = module.vpc.vpc_id
   vpc_cidr         = var.vpc_cidr
   database_subnets = module.vpc.database_subnets
-  db_password      = var.db_password
+
+  # Per-service credentials — supply via TF_VAR_* or terraform.tfvars (git-ignored)
+  identity_db_password  = var.identity_db_password
+  order_db_password     = var.order_db_password
+  inventory_db_password = var.inventory_db_password
+  catalog_db_password   = var.catalog_db_password
 }
 
 module "s3" {
@@ -27,7 +32,6 @@ module "s3" {
 # ------------------------------------------------------------------------------
 # STEP 4: The Compute Tier (Amazon EKS)
 # ------------------------------------------------------------------------------
-# This calls the module you have open in the Canvas right now!
 module "eks" {
   source          = "./modules/eks"
   environment     = var.environment
