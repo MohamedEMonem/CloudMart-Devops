@@ -360,14 +360,14 @@ pipeline {
     post {
 always {
         junit allowEmptyResults: true, testResults: 'tests/**/junit-*.xml'
-        // sh '''
-        //     docker image prune -f --filter "label=maintainer=cloudmart" || true
-        // '''
-        // Fix root-owned files left by the node:18-alpine container before cleanup
-        // sh '''
-        //     docker run --rm -v "$WORKSPACE:/ws" node:18-alpine \
-        //         chown -R $(id -u):$(id -g) /ws || true
-        // '''
+        sh '''
+            docker image prune -f --filter "label=maintainer=cloudmart" || true
+        '''
+        Fix root-owned files left by the node:18-alpine container before cleanup
+        sh '''
+            docker run --rm -v "$WORKSPACE:/ws" node:18-alpine \
+                chown -R $(id -u):$(id -g) /ws || true
+        '''
         cleanWs(patterns: [[pattern: '.npm-cache/**', type: 'EXCLUDE']])
     }
 
