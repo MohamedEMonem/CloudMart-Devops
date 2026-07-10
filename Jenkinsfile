@@ -363,7 +363,7 @@ always {
         sh '''
             docker image prune -f --filter "label=maintainer=cloudmart" || true
         '''
-        Fix root-owned files left by the node:18-alpine container before cleanup
+        // Fix root-owned files left by the node:18-alpine container before cleanup
         sh '''
             docker run --rm -v "$WORKSPACE:/ws" node:18-alpine \
                 chown -R $(id -u):$(id -g) /ws || true
