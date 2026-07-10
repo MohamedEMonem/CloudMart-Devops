@@ -244,7 +244,7 @@ pipeline {
                             env.RDS_ORDER_ENDPOINT     = sh(script: 'terraform output -raw rds_order_endpoint',     returnStdout: true).trim()
                             env.RDS_INVENTORY_ENDPOINT = sh(script: 'terraform output -raw rds_inventory_endpoint', returnStdout: true).trim()
                             env.DOCDB_CATALOG_ENDPOINT = sh(script: 'terraform output -raw docdb_catalog_endpoint', returnStdout: true).trim()
-                            env.EKS_CLUSTER_NAME       = sh(script: 'terraform output -raw eks-cluster_name',       returnStdout: true).trim()
+                            env.EKS_CLUSTER_NAME       = sh(script: 'terraform output -raw eks_cluster_name',       returnStdout: true).trim()
                         }
 
                         echo "Identity RDS  : ${env.RDS_IDENTITY_ENDPOINT}"
