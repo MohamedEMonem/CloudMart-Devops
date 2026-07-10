@@ -4,6 +4,7 @@ metadata:
   name: rabbitmq-pvc
   namespace: cloudmart
 spec:
+  storageClassName: gp2
   accessModes:
     - ReadWriteOnce
   resources:

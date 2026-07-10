@@ -4,6 +4,7 @@ metadata:
   name: cart-redis-pvc
   namespace: cloudmart
 spec:
+  storageClassName: gp2
   accessModes:
     - ReadWriteOnce
   resources:
