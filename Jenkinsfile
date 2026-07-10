@@ -29,19 +29,19 @@ pipeline {
         // Parent stage to handle all Node.js execution inside a single container
         stage('Node.js Environment') {
             agent {
-                docker { 
-                    image 'node:18-alpine' 
+                docker {
+                    image 'node:18-alpine'
                     reuseNode true
                 }
             }
             stages {
-               stage('Install Test Dependencies') {
+                stage('Install Test Dependencies') {
                     steps {
                         // 1. Install dependencies for the testing framework
                         dir('tests') {
                             sh 'npm ci --cache .npm-cache'
                         }
-                        
+
                         // 2. Install dependencies for all microservices so TypeScript can compile
                         sh '''
                             echo "Installing microservice dependencies..."
@@ -49,10 +49,8 @@ pipeline {
                                 if [ -f "${svc}package.json" ]; then
                                     echo "➔ Installing dependencies for ${svc}"
                                     cd "${svc}"
-                                    # Use --no-audit and --no-fund to drastically speed up pipeline installation
                                     npm install --no-audit --no-fund --cache ../../.npm-cache
-                                    
-                                    # If the service uses Prisma, generate the client so tests can use it
+
                                     if grep -q "prisma" "package.json"; then
                                         echo "➔ Generating Prisma client for ${svc}"
                                         npx prisma generate || true
@@ -81,7 +79,6 @@ pipeline {
                         }
                     }
                 }
-
             }
         }
 
@@ -105,6 +102,7 @@ pipeline {
                 }
             }
         }
+
         stage('Build Docker Images') {
             parallel {
                 stage('api-gateway') {
@@ -151,44 +149,44 @@ pipeline {
         }
 
         stage('Push Docker Images') {
-    steps {
-        withCredentials([
-            usernamePassword(
-                credentialsId: 'dockerhub-creds',
-                usernameVariable: 'DOCKER_USER',
-                passwordVariable: 'DOCKER_PASS'
-            )
-        ]) {
-            sh '''
-                echo "$DOCKER_PASS" | docker login \
-                    --username "$DOCKER_USER" \
-                    --password-stdin
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login \
+                            --username "$DOCKER_USER" \
+                            --password-stdin
 
-                SERVICES="api-gateway identity-service product-catalog-service inventory-service cart-service order-service payment-service frontend"
+                        SERVICES="api-gateway identity-service product-catalog-service inventory-service cart-service order-service payment-service frontend"
 
-                for svc in $SERVICES; do
-                    imageName="marwanmw/cloudmart-$svc"
+                        for svc in $SERVICES; do
+                            imageName="marwanmw/cloudmart-$svc"
 
-                    docker tag ${imageName}:${IMAGE_TAG} ${imageName}:latest
-                    docker push ${imageName}:${IMAGE_TAG}
-                    docker push ${imageName}:latest
-                done
+                            docker tag ${imageName}:${IMAGE_TAG} ${imageName}:latest
+                            docker push ${imageName}:${IMAGE_TAG}
+                            docker push ${imageName}:latest
+                        done
 
-                docker logout
-            '''
+                        docker logout
+                    '''
+                }
+            }
         }
-    }
-}
 
         stage('Terraform Plan') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'aws-access-key-id',          variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret-access-key',       variable: 'AWS_SECRET_ACCESS_KEY'),
-                    string(credentialsId: 'identity-db-password',        variable: 'TF_VAR_identity_db_password'),
-                    string(credentialsId: 'order-db-password',           variable: 'TF_VAR_order_db_password'),
-                    string(credentialsId: 'inventory-db-password',       variable: 'TF_VAR_inventory_db_password'),
-                    string(credentialsId: 'catalog-db-password',         variable: 'TF_VAR_catalog_db_password')
+                    string(credentialsId: 'aws-access-key-id',    variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+                    string(credentialsId: 'identity-db-password',  variable: 'TF_VAR_identity_db_password'),
+                    string(credentialsId: 'order-db-password',     variable: 'TF_VAR_order_db_password'),
+                    string(credentialsId: 'inventory-db-password', variable: 'TF_VAR_inventory_db_password'),
+                    string(credentialsId: 'catalog-db-password',   variable: 'TF_VAR_catalog_db_password')
                 ]) {
                     dir("${TERRAFORM_DIR}") {
                         sh '''
@@ -208,12 +206,12 @@ pipeline {
             steps {
                 input message: 'Apply Terraform changes to production?', ok: 'Deploy Infrastructure'
                 withCredentials([
-                    string(credentialsId: 'aws-access-key-id',          variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret-access-key',       variable: 'AWS_SECRET_ACCESS_KEY'),
-                    string(credentialsId: 'identity-db-password',        variable: 'TF_VAR_identity_db_password'),
-                    string(credentialsId: 'order-db-password',           variable: 'TF_VAR_order_db_password'),
-                    string(credentialsId: 'inventory-db-password',       variable: 'TF_VAR_inventory_db_password'),
-                    string(credentialsId: 'catalog-db-password',         variable: 'TF_VAR_catalog_db_password')
+                    string(credentialsId: 'aws-access-key-id',    variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+                    string(credentialsId: 'identity-db-password',  variable: 'TF_VAR_identity_db_password'),
+                    string(credentialsId: 'order-db-password',     variable: 'TF_VAR_order_db_password'),
+                    string(credentialsId: 'inventory-db-password', variable: 'TF_VAR_inventory_db_password'),
+                    string(credentialsId: 'catalog-db-password',   variable: 'TF_VAR_catalog_db_password')
                 ]) {
                     dir("${TERRAFORM_DIR}") {
                         sh 'terraform apply -auto-approve tfplan'
@@ -222,7 +220,6 @@ pipeline {
             }
         }
 
-
         // -----------------------------------------------------------------------
         // Read the real AWS endpoints from Terraform and inject them into K8s
         // secrets dynamically — no placeholder editing required.
@@ -230,16 +227,15 @@ pipeline {
         stage('Inject RDS Endpoints into K8s Secrets') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'aws-access-key-id',          variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret-access-key',       variable: 'AWS_SECRET_ACCESS_KEY'),
-                    string(credentialsId: 'identity-db-password',        variable: 'IDENTITY_DB_PASS'),
-                    string(credentialsId: 'order-db-password',           variable: 'ORDER_DB_PASS'),
-                    string(credentialsId: 'inventory-db-password',       variable: 'INVENTORY_DB_PASS'),
-                    string(credentialsId: 'catalog-db-password',         variable: 'CATALOG_DB_PASS')
+                    string(credentialsId: 'aws-access-key-id',    variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+                    string(credentialsId: 'identity-db-password',  variable: 'IDENTITY_DB_PASS'),
+                    string(credentialsId: 'order-db-password',     variable: 'ORDER_DB_PASS'),
+                    string(credentialsId: 'inventory-db-password', variable: 'INVENTORY_DB_PASS'),
+                    string(credentialsId: 'catalog-db-password',   variable: 'CATALOG_DB_PASS')
                 ]) {
                     script {
                         dir("${TERRAFORM_DIR}") {
-                            // Capture all four endpoints from Terraform outputs
                             env.RDS_IDENTITY_ENDPOINT  = sh(script: 'terraform output -raw rds_identity_endpoint',  returnStdout: true).trim()
                             env.RDS_ORDER_ENDPOINT     = sh(script: 'terraform output -raw rds_order_endpoint',     returnStdout: true).trim()
                             env.RDS_INVENTORY_ENDPOINT = sh(script: 'terraform output -raw rds_inventory_endpoint', returnStdout: true).trim()
@@ -255,19 +251,11 @@ pipeline {
                     }
 
                     sh """
-                        # Connect kubectl to EKS
                         aws eks update-kubeconfig \
                             --region ${AWS_REGION} \
                             --name ${env.EKS_CLUSTER_NAME}
 
-                        # Ensure namespace exists
                         kubectl apply -f k8s/base/namespace.yaml
-
-                        # ------------------------------------------------------------------
-                        # Dynamically create/update each DB secret with the real endpoint.
-                        # Using --dry-run=client | kubectl apply is idempotent — safe to
-                        # re-run on every pipeline execution.
-                        # ------------------------------------------------------------------
 
                         kubectl create secret generic identity-db-secret \
                             --namespace=${K8S_NAMESPACE} \
@@ -298,78 +286,128 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        // -----------------------------------------------------------------------
+        // Deploy in-cluster infrastructure (RabbitMQ, Redis) FIRST and verify it is
+        // actually healthy before touching any application services. This is a
+        // hard gate — no "|| true" here. If infra doesn't come up, the build stops.
+        // -----------------------------------------------------------------------
+        stage('Deploy Infrastructure (RabbitMQ, Redis)') {
             steps {
                 withCredentials([
                     string(credentialsId: 'aws-access-key-id',    variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
                     sh """
-                        # kubectl is already configured from the previous stage
                         aws eks update-kubeconfig \
                             --region ${AWS_REGION} \
                             --name ${env.EKS_CLUSTER_NAME}
 
-                        # NOTE: k8s/databases/ now only contains in-cluster components:
+                        # k8s/databases/ contains only in-cluster components now:
                         #   - cart-redis.yaml
                         #   - rabbitmq.yaml
-                        # The 4 DB pod yamls were archived; RDS/DocDB are managed by Terraform.
+                        # These manifests must pin storageClassName explicitly (e.g. gp2)
+                        # rather than relying on a cluster default, since the default
+                        # annotation does not persist across Terraform-recreated clusters.
                         kubectl apply -f k8s/databases/
 
-                        # Wait for in-cluster infrastructure (Redis, RabbitMQ) to be ready
-                        echo "Waiting for in-cluster infrastructure pods to become ready..."
-                        kubectl wait --for=condition=ready pod \
-                            -l tier=infrastructure \
-                            -n ${K8S_NAMESPACE} \
-                            --timeout=120s || true
+                        echo "Waiting for RabbitMQ to become healthy..."
+                        kubectl rollout status deployment/rabbitmq -n ${K8S_NAMESPACE} --timeout=180s
 
-                        # Update service images to the current build tag
-                        SERVICES="api-gateway identity-service product-catalog-service inventory-service cart-service order-service payment-service"
-                        for svc in \$SERVICES; do
-                            sed -i "s|image: ${DOCKERHUB_USER}/cloudmart-\${svc}.*|image: ${DOCKERHUB_USER}/cloudmart-\${svc}:${IMAGE_TAG}|g" \
-                                k8s/services/\${svc}.yaml
-                        done
+                        echo "Waiting for cart-redis to become healthy..."
+                        kubectl rollout status deployment/cart-redis -n ${K8S_NAMESPACE} --timeout=180s
 
-                        # Update frontend image
-                        sed -i "s|image: ${DOCKERHUB_USER}/cloudmart-frontend.*|image: ${DOCKERHUB_USER}/cloudmart-frontend:${IMAGE_TAG}|g" \
-                            k8s/frontend/frontend.yaml
-
-                        # Apply services & frontend
-                        kubectl apply -f k8s/services/
-                        kubectl apply -f k8s/frontend/
-
-                        # Apply HPA
-                        kubectl apply -f k8s/services/hpa.yaml
-
-                        # Verify rollout status for all services
-                        for svc in \$SERVICES; do
-                            kubectl rollout status deployment/\${svc} \
-                                -n ${K8S_NAMESPACE} \
-                                --timeout=180s || true
-                        done
-
-                        kubectl rollout status deployment/frontend \
-                            -n ${K8S_NAMESPACE} \
-                            --timeout=180s || true
+                        echo "✅ Infrastructure is healthy — proceeding to services"
                     """
+                }
+            }
+        }
+
+        // -----------------------------------------------------------------------
+        // Deploy application services one by one, verifying each rollout.
+        // On any failure, roll that service back to its previous ReplicaSet and
+        // fail the build immediately — do not continue deploying the rest.
+        // -----------------------------------------------------------------------
+        stage('Deploy Services to Kubernetes') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key-id',    variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    script {
+                        def services = [
+                            'api-gateway',
+                            'identity-service',
+                            'product-catalog-service',
+                            'inventory-service',
+                            'cart-service',
+                            'order-service',
+                            'payment-service'
+                        ]
+
+                        sh """
+                            aws eks update-kubeconfig \
+                                --region ${AWS_REGION} \
+                                --name ${env.EKS_CLUSTER_NAME}
+                        """
+
+                        // Update image tags before applying
+                        for (svc in services) {
+                            sh """
+                                sed -i "s|image: ${DOCKERHUB_USER}/cloudmart-${svc}.*|image: ${DOCKERHUB_USER}/cloudmart-${svc}:${IMAGE_TAG}|g" \
+                                    k8s/services/${svc}.yaml
+                            """
+                        }
+                        sh """
+                            sed -i "s|image: ${DOCKERHUB_USER}/cloudmart-frontend.*|image: ${DOCKERHUB_USER}/cloudmart-frontend:${IMAGE_TAG}|g" \
+                                k8s/frontend/frontend.yaml
+                        """
+
+                        sh "kubectl apply -f k8s/services/"
+                        sh "kubectl apply -f k8s/services/hpa.yaml"
+                        sh "kubectl apply -f k8s/frontend/"
+
+                        // Verify each service's rollout individually so failures are
+                        // attributable to a specific service, and roll back on failure.
+                        for (svc in services) {
+                            try {
+                                echo "Verifying rollout for ${svc}..."
+                                sh "kubectl rollout status deployment/${svc} -n ${K8S_NAMESPACE} --timeout=180s"
+                            } catch (err) {
+                                echo "❌ Rollout failed for ${svc} — rolling back to previous version"
+                                sh "kubectl rollout undo deployment/${svc} -n ${K8S_NAMESPACE} || true"
+                                error("Deployment failed for ${svc}, rolled back. Original error: ${err}")
+                            }
+                        }
+
+                        try {
+                            echo "Verifying rollout for frontend..."
+                            sh "kubectl rollout status deployment/frontend -n ${K8S_NAMESPACE} --timeout=180s"
+                        } catch (err) {
+                            echo "❌ Rollout failed for frontend — rolling back to previous version"
+                            sh "kubectl rollout undo deployment/frontend -n ${K8S_NAMESPACE} || true"
+                            error("Deployment failed for frontend, rolled back. Original error: ${err}")
+                        }
+
+                        echo "✅ All services deployed and healthy"
+                    }
                 }
             }
         }
     }
 
     post {
-always {
-        junit allowEmptyResults: true, testResults: 'tests/**/junit-*.xml'
-        sh '''
-            docker image prune -f --filter "label=maintainer=cloudmart" || true
-        '''
-        // Fix root-owned files left by the node:18-alpine container before cleanup
-        sh '''
-            docker run --rm -v "$WORKSPACE:/ws" node:18-alpine \
-                chown -R $(id -u):$(id -g) /ws || true
-        '''
-        cleanWs(patterns: [[pattern: '.npm-cache/**', type: 'EXCLUDE']])
-    }
+        always {
+            junit allowEmptyResults: true, testResults: 'tests/**/junit-*.xml'
+            sh '''
+                docker image prune -f --filter "label=maintainer=cloudmart" || true
+            '''
+            // Fix root-owned files left by the node:18-alpine container before cleanup
+            sh '''
+                docker run --rm -v "$WORKSPACE:/ws" node:18-alpine \
+                    chown -R $(id -u):$(id -g) /ws || true
+            '''
+            cleanWs(patterns: [[pattern: '.npm-cache/**', type: 'EXCLUDE']])
+        }
 
         success {
             echo '══════════════════════════════════════════════'
@@ -382,6 +420,7 @@ always {
         failure {
             echo '══════════════════════════════════════════════'
             echo '  ❌  Pipeline FAILED — check logs above.'
+            echo '  ↩️   Any partially-deployed service was rolled back.'
             echo '══════════════════════════════════════════════'
         }
 
