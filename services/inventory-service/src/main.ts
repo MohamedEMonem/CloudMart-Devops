@@ -5,7 +5,10 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const logger = new Logger('InventoryService');
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { logger: ['log', 'warn', 'error', 'fatal'] });
+
+  // Enables PrismaService.onModuleDestroy() on SIGTERM/SIGINT
+  app.enableShutdownHooks();
 
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(
@@ -37,6 +40,8 @@ async function bootstrap() {
   await app.listen(port);
   logger.log(`📊 Inventory Service running on port ${port}`);
   logger.log(`📡 Listening on RabbitMQ queue: order_events`);
+  logger.log(`🩺 Liveness  probe: GET /health`);
+  logger.log(`🩺 Readiness probe: GET /health/ready`);
 }
 
 bootstrap();

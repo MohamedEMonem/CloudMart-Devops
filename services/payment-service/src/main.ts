@@ -1,10 +1,14 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('PaymentService');
+  const app = await NestFactory.create(AppModule, { logger: ['log', 'warn', 'error', 'fatal'] });
+
+  // Enables graceful shutdown hooks on SIGTERM/SIGINT
+  app.enableShutdownHooks();
 
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(
@@ -34,8 +38,10 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`💳 Payment Service running on port ${port}`);
-  console.log(`📡 Payment Service listening on RabbitMQ queue: order_events`);
+  logger.log(`💳 Payment Service running on port ${port}`);
+  logger.log(`📡 Payment Service listening on RabbitMQ queue: order_events`);
+  logger.log(`🩺 Liveness  probe: GET /health`);
+  logger.log(`🩺 Readiness probe: GET /health/ready`);
 }
 
 bootstrap();

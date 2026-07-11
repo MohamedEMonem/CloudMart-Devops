@@ -15,14 +15,18 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: tahany/dokkan-frontend:latest
+          image: marwanmw/cloudmart-frontend:latest
           ports:
             - containerPort: 3007
           env:
             - name: PORT
               value: "3007"
+            - name: HOSTNAME
+              value: "0.0.0.0"
             - name: NEXT_PUBLIC_API_URL
               value: "/api/v1"
+            - name: NEXT_PUBLIC_WS_URL
+              value: ""
           resources:
             requests:
               cpu: 100m

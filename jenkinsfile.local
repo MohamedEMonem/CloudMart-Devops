@@ -1,0 +1,193 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_USER    = 'marwanmw'
+        IMAGE_TAG         = "local-${BUILD_NUMBER}"
+        K8S_NAMESPACE     = 'cloudmart'
+        // AWS and Terraform variables removed
+    }
+
+    options {
+        timestamps()
+        timeout(time: 60, unit: 'MINUTES') // Reduced for local testing
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                echo "Running Local Pipeline Test"
+            }
+        }
+
+        stage('Node.js Environment') {
+            agent {
+                docker { image 'node:18-alpine'; reuseNode true }
+            }
+            stages {
+                stage('Install Test Dependencies') {
+                    steps {
+                        dir('tests') { sh 'npm ci --cache .npm-cache' }
+                        sh '''
+                            echo "Installing microservice dependencies..."
+                            for svc in services/*/; do
+                                if [ -f "${svc}package.json" ]; then
+                                    cd "${svc}"
+                                    npm install --no-audit --no-fund --cache ../../.npm-cache
+                                    if grep -q "prisma" "package.json"; then
+                                        npx prisma generate || true
+                                    fi
+                                    cd ../..
+                                fi
+                            done
+                        '''
+                    }
+                }
+                stage('Run Tests') {
+                    parallel {
+                        stage('Unit Tests') {
+                            steps { dir('tests') { sh 'npx jest unit --preset ts-jest --ci --forceExit' } }
+                        }
+                        // Skipped Infrastructure tests for local speed, or keep if you prefer
+                    }
+                }
+            }
+        }
+
+        stage('Integration Tests') {
+            steps {
+                script {
+                    try {
+                        sh 'docker compose up -d --build'
+                        sh 'sleep 30' // Reduced wait time for local
+                        sh """
+                            docker run --rm --network ecommerce-net \
+                            -v "${WORKSPACE}:/app" -w /app/tests node:18-alpine \
+                            sh -c "apk add --no-cache python3 make g++ && npm ci --cache .npm-cache && API_URL=http://api-gateway:3000 npx jest integration --preset ts-jest --ci --runInBand --forceExit"
+                        """
+                    } finally {
+                        sh 'docker compose down -v || true'
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            // Unchanged from your original pipeline
+            parallel {
+                stage('api-gateway') { steps { sh "docker build -t ${DOCKERHUB_USER}/cloudmart-api-gateway:${IMAGE_TAG} services/api-gateway" } }
+                stage('identity-service') { steps { sh "docker build -t ${DOCKERHUB_USER}/cloudmart-identity-service:${IMAGE_TAG} services/identity-service" } }
+                stage('product-catalog-service') { steps { sh "docker build -t ${DOCKERHUB_USER}/cloudmart-product-catalog-service:${IMAGE_TAG} services/product-catalog-service" } }
+                stage('inventory-service') { steps { sh "docker build -t ${DOCKERHUB_USER}/cloudmart-inventory-service:${IMAGE_TAG} services/inventory-service" } }
+                stage('cart-service') { steps { sh "docker build -t ${DOCKERHUB_USER}/cloudmart-cart-service:${IMAGE_TAG} services/cart-service" } }
+                stage('order-service') { steps { sh "docker build -t ${DOCKERHUB_USER}/cloudmart-order-service:${IMAGE_TAG} services/order-service" } }
+                stage('payment-service') { steps { sh "docker build -t ${DOCKERHUB_USER}/cloudmart-payment-service:${IMAGE_TAG} services/payment-service" } }
+                stage('frontend') { steps { sh "docker build -t ${DOCKERHUB_USER}/cloudmart-frontend:${IMAGE_TAG} cloudmart-frontend" } }
+            }
+        }
+
+        stage('Push Docker Images') {
+            steps {
+                // Ensure 'dockerhub-creds' exists in your local Jenkins!
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login --username "$DOCKER_USER" --password-stdin
+                        SERVICES="api-gateway identity-service product-catalog-service inventory-service cart-service order-service payment-service frontend"
+                        
+                        for svc in $SERVICES; do
+                            imageName="marwanmw/cloudmart-$svc"
+                            docker tag ${imageName}:${IMAGE_TAG} ${imageName}:latest
+                            docker push ${imageName}:${IMAGE_TAG}
+                        done
+                        docker logout
+                    '''
+                }
+            }
+        }
+
+        stage('Inject Mock Secrets into K8s') {
+            steps {
+                // 1. No AWS EKS update-kubeconfig needed. Jenkins relies on local ~/.kube/config
+                // 2. Mocking the database URLs to point to local K8s services (e.g., identity-db:5432)
+                sh """
+                    kubectl apply -f k8s/base/namespace.yaml
+
+                    kubectl create secret generic identity-db-secret \
+                        --namespace=${K8S_NAMESPACE} \
+                        --from-literal=DATABASE_URL="postgresql://identity_user:localpass@identity-db:5432/identity_db" \
+                        --dry-run=client -o yaml | kubectl apply -f -
+
+                    kubectl create secret generic order-db-secret \
+                        --namespace=${K8S_NAMESPACE} \
+                        --from-literal=DATABASE_URL="postgresql://order_user:localpass@order-db:5432/order_db" \
+                        --dry-run=client -o yaml | kubectl apply -f -
+
+                    kubectl create secret generic inventory-db-secret \
+                        --namespace=${K8S_NAMESPACE} \
+                        --from-literal=DATABASE_URL="postgresql://inventory_user:localpass@inventory-db:5432/inventory_db" \
+                        --dry-run=client -o yaml | kubectl apply -f -
+
+                    kubectl create secret generic catalog-db-secret \
+                        --namespace=${K8S_NAMESPACE} \
+                        --from-literal=MONGODB_URI="mongodb://catalog_user:localpass@catalog-db:27017/catalog_db" \
+                        --dry-run=client -o yaml | kubectl apply -f -
+
+                    kubectl apply -f k8s/secrets/
+                    echo "✅ Mock local K8s secrets injected"
+                """
+            }
+        }
+
+        stage('Deploy Infrastructure (Local)') {
+            steps {
+                // Removed AWS EKS auth commands
+                sh """
+                    # Assuming you have local manifests for the DBs to catch these connections
+                    kubectl apply -f k8s/databases/
+
+                    echo "Waiting for local infrastructure..."
+                    kubectl rollout status deployment/rabbitmq -n ${K8S_NAMESPACE} --timeout=120s || true
+                    kubectl rollout status deployment/cart-redis -n ${K8S_NAMESPACE} --timeout=120s || true
+                """
+            }
+        }
+
+        stage('Deploy Services to Local Kubernetes') {
+            steps {
+                // Removed AWS EKS auth commands
+                script {
+                    def services = ['api-gateway', 'identity-service', 'product-catalog-service', 'inventory-service', 'cart-service', 'order-service', 'payment-service']
+
+                    for (svc in services) {
+                        sh "sed -i \"s|image: ${DOCKERHUB_USER}/cloudmart-${svc}.*|image: ${DOCKERHUB_USER}/cloudmart-${svc}:${IMAGE_TAG}|g\" k8s/services/${svc}.yaml"
+                    }
+                    sh "sed -i \"s|image: ${DOCKERHUB_USER}/cloudmart-frontend.*|image: ${DOCKERHUB_USER}/cloudmart-frontend:${IMAGE_TAG}|g\" k8s/frontend/frontend.yaml"
+
+                    sh "kubectl apply -f k8s/services/"
+                    sh "kubectl apply -f k8s/services/hpa.yaml || true" // HPAs might fail if local K8s lacks metrics-server
+                    sh "kubectl apply -f k8s/frontend/"
+
+                    for (svc in services) {
+                        try {
+                            sh "kubectl rollout status deployment/${svc} -n ${K8S_NAMESPACE} --timeout=180s"
+                        } catch (err) {
+                            echo "❌ Rollout failed for ${svc} — rolling back"
+                            sh "kubectl rollout undo deployment/${svc} -n ${K8S_NAMESPACE} || true"
+                            error("Deployment failed for ${svc}")
+                        }
+                    }
+                    sh "kubectl rollout status deployment/frontend -n ${K8S_NAMESPACE} --timeout=180s"
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            cleanWs(patterns: [[pattern: '.npm-cache/**', type: 'EXCLUDE']])
+        }
+    }
+}
