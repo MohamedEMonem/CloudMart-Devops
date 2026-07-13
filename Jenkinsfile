@@ -274,7 +274,7 @@ pipeline {
 
                         kubectl create secret generic catalog-db-secret \
                             --namespace=${K8S_NAMESPACE} \
-                            --from-literal=MONGODB_URI="mongodb://catalog_user:\${CATALOG_DB_PASS}@${env.DOCDB_CATALOG_ENDPOINT}/catalog_db?tls=true&tlsCAFile=/etc/ssl/certs/global-bundle.pem&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false" \
+                            --from-literal=MONGODB_URI="mongodb://catalog_user:\${CATALOG_DB_PASS}@${env.DOCDB_CATALOG_ENDPOINT}/catalog_db?tls=true&tlsCAFile=/etc/ssl/certs/global-bundle.pem&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false&authMechanism=SCRAM-SHA-1" \
                             --dry-run=client -o yaml | kubectl apply -f -
 
                         # Apply the remaining non-DB secrets (JWT, RabbitMQ, payment, Redis)
