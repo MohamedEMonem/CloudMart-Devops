@@ -10,7 +10,7 @@ async function bootstrap() {
   // Enables graceful shutdown hooks on SIGTERM/SIGINT
   app.enableShutdownHooks();
 
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('v1');
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
   );
