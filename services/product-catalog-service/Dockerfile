@@ -11,6 +11,10 @@ WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
+# Install wget (if not present) and download the AWS global bundle
+RUN mkdir -p /etc/ssl/certs && \
+  wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /etc/ssl/certs/global-bundle.pem && \
+  chmod 644 /etc/ssl/certs/global-bundle.pem
 EXPOSE 3000
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=30s \
