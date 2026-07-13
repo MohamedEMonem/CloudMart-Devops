@@ -24,7 +24,7 @@ spec:
             - name: HOSTNAME
               value: "0.0.0.0"
             - name: NEXT_PUBLIC_API_URL
-              value: "/api/v1"
+              value: "/v1"
             - name: NEXT_PUBLIC_WS_URL
               value: ""
           resources:

@@ -11,9 +11,9 @@ import {
 } from './types/bff-orders.types';
 
 // Internal Docker network base URLs
-const ORDER_SERVICE_URL   = 'http://order-service:3000/api/v1';
-const CATALOG_SERVICE_URL = 'http://product-catalog-service:3000/api/v1';
-const IDENTITY_SERVICE_URL = 'http://identity-service:3000/api/v1';
+const ORDER_SERVICE_URL   = 'http://order-service:3000/v1';
+const CATALOG_SERVICE_URL = 'http://product-catalog-service:3000/v1';
+const IDENTITY_SERVICE_URL = 'http://identity-service:3000/v1';
 
 @Injectable()
 export class BffOrdersService {
