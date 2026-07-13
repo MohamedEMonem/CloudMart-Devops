@@ -314,10 +314,10 @@ pipeline {
                         kubectl apply -f k8s/databases/
 
                         echo "Waiting for RabbitMQ to become healthy..."
-                        kubectl rollout status deployment/rabbitmq -n ${K8S_NAMESPACE} --timeout=180s
+                        kubectl rollout status deployment/rabbitmq -n ${K8S_NAMESPACE} --timeout=420s
 
                         echo "Waiting for cart-redis to become healthy..."
-                        kubectl rollout status deployment/cart-redis -n ${K8S_NAMESPACE} --timeout=180s
+                        kubectl rollout status deployment/cart-redis -n ${K8S_NAMESPACE} --timeout=420s
 
                         echo "✅ Infrastructure is healthy — proceeding to services"
                     """
@@ -374,7 +374,7 @@ pipeline {
                         for (svc in services) {
                             try {
                                 echo "Verifying rollout for ${svc}..."
-                                sh "kubectl rollout status deployment/${svc} -n ${K8S_NAMESPACE} --timeout=180s"
+                                sh "kubectl rollout status deployment/${svc} -n ${K8S_NAMESPACE} --timeout=420s"
                             } catch (err) {
                                 echo "❌ Rollout failed for ${svc} — rolling back to previous version"
                                 sh "kubectl rollout undo deployment/${svc} -n ${K8S_NAMESPACE} || true"
@@ -384,7 +384,7 @@ pipeline {
 
                         try {
                             echo "Verifying rollout for frontend..."
-                            sh "kubectl rollout status deployment/frontend -n ${K8S_NAMESPACE} --timeout=180s"
+                            sh "kubectl rollout status deployment/frontend -n ${K8S_NAMESPACE} --timeout=420s"
                         } catch (err) {
                             echo "❌ Rollout failed for frontend — rolling back to previous version"
                             sh "kubectl rollout undo deployment/frontend -n ${K8S_NAMESPACE} || true"
