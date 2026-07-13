@@ -30,26 +30,27 @@ module "eks" {
   authentication_mode                      = "API_AND_CONFIG_MAP"
   enable_cluster_creator_admin_permissions = true
 
-  # 1. FIX: Renamed from 'addons' to 'cluster_addons'
  addons = {
-    vpc-cni = {
-      # 2. FIX: Dynamically fetch the correct version for K8s 1.36
+      vpc-cni = {
       most_recent                 = true
       before_compute              = true
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
     }
-
     kube-proxy = {
       most_recent                 = true
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
     }
-
     coredns = {
       most_recent                 = true
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
+    }
+    # FIX: Moved the CSI driver inside the module block
+    aws-ebs-csi-driver = {
+      most_recent              = true
+      service_account_role_arn = module.ebs_csi_irsa_role.iam_role_arn
     }
   }
 
@@ -71,6 +72,21 @@ module "eks" {
     Environment = var.environment
     Project     = "CloudMart E-Commerce"
     Terraform   = "true"
+  }
+}
+
+module "ebs_csi_irsa_role" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.0"
+
+  role_name             = "${module.eks.cluster_name}-ebs-csi-role"
+  attach_ebs_csi_policy = true
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
   }
 }
 
