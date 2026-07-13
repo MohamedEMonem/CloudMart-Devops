@@ -29,6 +29,17 @@ export class JwtAuthMiddleware implements NestMiddleware {
   }
 
   use(req: Request, _res: Response, next: NextFunction) {
+    // Public routes that do not require a JWT — allow them to pass through immediately
+    const publicRoutes = [
+      '/api/v1/auth/login',
+      '/api/v1/auth/register',
+      '/api/v1/health',
+    ];
+
+    if (publicRoutes.some((route) => req.path.startsWith(route))) {
+      return next();
+    }
+
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new UnauthorizedException('Missing or malformed Authorization header');
