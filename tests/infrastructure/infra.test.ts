@@ -373,8 +373,8 @@ describe('Nginx Configuration', () => {
     expect(nginxConf).toMatch(/listen\s+80/);
   });
 
-  it('should proxy /api/ to api-gateway', () => {
-    expect(nginxConf).toMatch(/location\s+\/api\//);
+  it('should proxy /v1/ to api-gateway', () => {
+    expect(nginxConf).toMatch(/location\s+\/v1\//);
     expect(nginxConf).toMatch(/proxy_pass\s+http:\/\/api-gateway:3000/);
   });
 

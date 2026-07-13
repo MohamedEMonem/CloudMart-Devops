@@ -70,7 +70,7 @@ export function useOrderSync(): UseOrderSyncReturn {
 
     // Derive the WebSocket base URL from NEXT_PUBLIC_API_URL (e.g. http://api.cloudmart.local/api/v1)
     // URL.origin strips the path, giving us the bare origin: http://api.cloudmart.local
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/v1';
     const gatewayUrl = new URL(apiUrl).origin;
 
     const socket = io(`${gatewayUrl}/ws/v1`, {
