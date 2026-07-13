@@ -21,12 +21,12 @@ export class AppModule implements NestModule {
     consumer
       .apply(JwtAuthMiddleware)
       .exclude(
-        { path: 'api/v1/auth/register', method: RequestMethod.POST },
-        { path: 'api/v1/auth/login',    method: RequestMethod.POST },
-        { path: 'api/v1/health',         method: RequestMethod.GET },
-        { path: 'api/v1/products',       method: RequestMethod.GET },
-        { path: 'api/v1/products/(.*)',  method: RequestMethod.GET },
-        { path: 'api/v1/users/vendors',  method: RequestMethod.GET },
+        { path: 'v1/auth/register',   method: RequestMethod.POST },
+        { path: 'v1/auth/login',       method: RequestMethod.POST },
+        { path: 'v1/health',           method: RequestMethod.GET },
+        { path: 'v1/products',         method: RequestMethod.GET },
+        { path: 'v1/products/(.*)',    method: RequestMethod.GET },
+        { path: 'v1/users/vendors',    method: RequestMethod.GET },
       )
       .forRoutes('*');
   }

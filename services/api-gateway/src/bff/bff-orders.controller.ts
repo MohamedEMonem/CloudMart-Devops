@@ -2,14 +2,14 @@ import { Controller, Get, Req, Logger } from '@nestjs/common';
 import { Request } from 'express';
 import { BffOrdersService } from './bff-orders.service';
 
-@Controller('api/v1/bff/orders')
+@Controller('v1/bff/orders')
 export class BffOrdersController {
   private readonly logger = new Logger(BffOrdersController.name);
 
   constructor(private readonly bffOrdersService: BffOrdersService) {}
 
   /**
-   * GET /api/v1/bff/orders/history
+   * GET /v1/bff/orders/history
    *
    * BFF Aggregation Endpoint — Order History
    *
