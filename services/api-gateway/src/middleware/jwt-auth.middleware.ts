@@ -27,16 +27,11 @@ export class JwtAuthMiddleware implements NestMiddleware {
   constructor() {
     this.jwtSecret = process.env.JWT_SECRET || 'default-secret';
   }
-
   use(req: Request, _res: Response, next: NextFunction) {
     // Public routes that do not require a JWT — allow them to pass through immediately
-    const publicRoutes = [
-      '/api/v1/auth/login',
-      '/api/v1/auth/register',
-      '/api/v1/health',
-    ];
+    const publicRoutes = ['login', 'register', 'health'];
 
-    if (publicRoutes.some((route) => req.path?.startsWith(route))) {
+    if (publicRoutes.some((route) => req.originalUrl?.includes(route) || req.url?.includes(route))) {
       return next();
     }
 
@@ -51,9 +46,9 @@ export class JwtAuthMiddleware implements NestMiddleware {
       const decoded = jwt.verify(token, this.jwtSecret) as JwtPayload;
 
       // Inject trusted identity headers for downstream services
-      req.headers['x-user-id']    = decoded.sub;
+      req.headers['x-user-id'] = decoded.sub;
       req.headers['x-user-email'] = decoded.email;
-      req.headers['x-user-role']  = decoded.role;
+      req.headers['x-user-role'] = decoded.role;
 
       next();
     } catch (err) {
