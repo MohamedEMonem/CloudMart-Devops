@@ -36,7 +36,7 @@ export class JwtAuthMiddleware implements NestMiddleware {
       '/api/v1/health',
     ];
 
-    if (publicRoutes.some((route) => req.path.startsWith(route))) {
+    if (publicRoutes.some((route) => req.path?.startsWith(route))) {
       return next();
     }
 
