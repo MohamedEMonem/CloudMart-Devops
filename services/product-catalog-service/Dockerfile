@@ -18,6 +18,6 @@ RUN mkdir -p /etc/ssl/certs && \
 EXPOSE 3000
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=30s \
-  CMD wget --quiet --tries=1 --spider http://localhost:3000/api/v1/health || exit 1
+  CMD wget --quiet --tries=1 --spider http://localhost:3000/v1/health || exit 1
 
 CMD ["node", "dist/main"]

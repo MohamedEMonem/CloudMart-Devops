@@ -4,11 +4,11 @@ import axios from 'axios';
  * Centralized Axios instance for all REST API calls to the
  * cloudmart API Gateway.
  *
- * Base URL:  http://localhost:3000/api/v1
+ * Base URL:  http://localhost:3000/v1
  * Auth:     JWT Bearer token from localStorage (key: "token")
  */
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/v1',
   headers: {
     'Content-Type': 'application/json',
   },

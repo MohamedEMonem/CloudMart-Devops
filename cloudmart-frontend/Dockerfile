@@ -8,8 +8,8 @@ RUN npm ci
 
 COPY . .
 
-# ENV NEXT_PUBLIC_API_URL=http://localhost/api/v1/
-ENV NEXT_PUBLIC_API_URL=/api/v1/
+# ENV NEXT_PUBLIC_API_URL=http://localhost/v1/
+ENV NEXT_PUBLIC_API_URL=/v1/
 RUN npm run build
 
 FROM node:20-alpine AS runner

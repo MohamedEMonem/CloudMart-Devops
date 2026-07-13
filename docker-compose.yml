@@ -19,7 +19,7 @@ services:
     networks:
       - ecommerce-net
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -43,7 +43,7 @@ services:
     networks:
       - ecommerce-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U identity_user -d identity_db"]
+      test: [ "CMD-SHELL", "pg_isready -U identity_user -d identity_db" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -63,7 +63,7 @@ services:
     networks:
       - ecommerce-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U inventory_user -d inventory_db"]
+      test: [ "CMD-SHELL", "pg_isready -U inventory_user -d inventory_db" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -83,7 +83,7 @@ services:
     networks:
       - ecommerce-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U order_user -d order_db"]
+      test: [ "CMD-SHELL", "pg_isready -U order_user -d order_db" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -103,7 +103,7 @@ services:
     networks:
       - ecommerce-net
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -120,7 +120,7 @@ services:
     networks:
       - ecommerce-net
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "cart_secret", "ping"]
+      test: [ "CMD", "redis-cli", "-a", "cart_secret", "ping" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -157,7 +157,7 @@ services:
       - "3007"
     environment:
       - PORT=3007
-      - NEXT_PUBLIC_API_URL=http://localhost/api/v1
+      - NEXT_PUBLIC_API_URL=http://localhost/v1
     depends_on:
       - api-gateway
     networks:
