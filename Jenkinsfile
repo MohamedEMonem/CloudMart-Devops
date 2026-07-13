@@ -308,6 +308,9 @@ pipeline {
                         # These manifests must pin storageClassName explicitly (e.g. gp2)
                         # rather than relying on a cluster default, since the default
                         # annotation does not persist across Terraform-recreated clusters.
+
+                        kubectl apply -f k8s/secrets/
+                        
                         kubectl apply -f k8s/databases/
 
                         echo "Waiting for RabbitMQ to become healthy..."
