@@ -41,8 +41,8 @@ describe('E2E: API Gateway → Microservices', () => {
   // ── Health Checks ─────────────────────────────────────
 
   describe('Health Checks', () => {
-    it('API Gateway /api/v1/health should return 200', async () => {
-      const { status, data } = await apiRequest('GET', '/api/v1/health');
+    it('API Gateway /v1/health should return 200', async () => {
+      const { status, data } = await apiRequest('GET', '/v1/health');
       expect(status).toBe(200);
       expect(data.status).toBe('ok');
     });
@@ -51,8 +51,8 @@ describe('E2E: API Gateway → Microservices', () => {
   // ── Identity Service: Auth ────────────────────────────
 
   describe('Auth Flow', () => {
-    it('POST /api/v1/auth/register — should create a new user', async () => {
-      const { status, data } = await apiRequest('POST', '/api/v1/auth/register', {
+    it('POST /v1/auth/register — should create a new user', async () => {
+      const { status, data } = await apiRequest('POST', '/v1/auth/register', {
         email: testEmail,
         password: testPassword,
         firstName: 'E2E',
@@ -65,8 +65,8 @@ describe('E2E: API Gateway → Microservices', () => {
       expect(data.id).toBeDefined();
     });
 
-    it('POST /api/v1/auth/register — should reject duplicate email', async () => {
-      const { status } = await apiRequest('POST', '/api/v1/auth/register', {
+    it('POST /v1/auth/register — should reject duplicate email', async () => {
+      const { status } = await apiRequest('POST', '/v1/auth/register', {
         email: testEmail,
         password: testPassword,
         firstName: 'E2E',
@@ -76,8 +76,8 @@ describe('E2E: API Gateway → Microservices', () => {
       expect(status).toBe(409);
     });
 
-    it('POST /api/v1/auth/login — should return JWT on valid credentials', async () => {
-      const { status, data } = await apiRequest('POST', '/api/v1/auth/login', {
+    it('POST /v1/auth/login — should return JWT on valid credentials', async () => {
+      const { status, data } = await apiRequest('POST', '/v1/auth/login', {
         email: testEmail,
         password: testPassword,
       });
@@ -91,8 +91,8 @@ describe('E2E: API Gateway → Microservices', () => {
       userId = data.user.id;
     });
 
-    it('POST /api/v1/auth/login — should reject invalid password', async () => {
-      const { status } = await apiRequest('POST', '/api/v1/auth/login', {
+    it('POST /v1/auth/login — should reject invalid password', async () => {
+      const { status } = await apiRequest('POST', '/v1/auth/login', {
         email: testEmail,
         password: 'WrongPassword!',
       });
@@ -104,8 +104,8 @@ describe('E2E: API Gateway → Microservices', () => {
   // ── Identity Service: Protected Routes ────────────────
 
   describe('Protected Routes (JWT Required)', () => {
-    it('GET /api/v1/users/me — should return user profile with valid JWT', async () => {
-      const { status, data } = await apiRequest('GET', '/api/v1/users/me', undefined, {
+    it('GET /v1/users/me — should return user profile with valid JWT', async () => {
+      const { status, data } = await apiRequest('GET', '/v1/users/me', undefined, {
         Authorization: `Bearer ${accessToken}`,
       });
 
@@ -114,13 +114,13 @@ describe('E2E: API Gateway → Microservices', () => {
       expect(data.firstName).toBe('E2E');
     });
 
-    it('GET /api/v1/users/me — should return 401 without JWT', async () => {
-      const { status } = await apiRequest('GET', '/api/v1/users/me');
+    it('GET /v1/users/me — should return 401 without JWT', async () => {
+      const { status } = await apiRequest('GET', '/v1/users/me');
       expect(status).toBe(401);
     });
 
-    it('GET /api/v1/users/me — should return 401 with invalid JWT', async () => {
-      const { status } = await apiRequest('GET', '/api/v1/users/me', undefined, {
+    it('GET /v1/users/me — should return 401 with invalid JWT', async () => {
+      const { status } = await apiRequest('GET', '/v1/users/me', undefined, {
         Authorization: 'Bearer invalid.jwt.token',
       });
       expect(status).toBe(401);
@@ -130,8 +130,8 @@ describe('E2E: API Gateway → Microservices', () => {
   // ── Product Catalog Service ───────────────────────────
 
   describe('Product Catalog', () => {
-    it('GET /api/v1/products — should return paginated products (public)', async () => {
-      const { status, data } = await apiRequest('GET', '/api/v1/products');
+    it('GET /v1/products — should return paginated products (public)', async () => {
+      const { status, data } = await apiRequest('GET', '/v1/products');
 
       expect(status).toBe(200);
       expect(data).toHaveProperty('data');
@@ -141,15 +141,15 @@ describe('E2E: API Gateway → Microservices', () => {
       expect(Array.isArray(data.data)).toBe(true);
     });
 
-    it('GET /api/v1/products?limit=5 — should respect limit param', async () => {
-      const { status, data } = await apiRequest('GET', '/api/v1/products?limit=5');
+    it('GET /v1/products?limit=5 — should respect limit param', async () => {
+      const { status, data } = await apiRequest('GET', '/v1/products?limit=5');
 
       expect(status).toBe(200);
       expect(data.limit).toBe(5);
     });
 
-    it('GET /api/v1/products?vendorId=test — should filter by vendor', async () => {
-      const { status, data } = await apiRequest('GET', '/api/v1/products?vendorId=nonexistent-vendor');
+    it('GET /v1/products?vendorId=test — should filter by vendor', async () => {
+      const { status, data } = await apiRequest('GET', '/v1/products?vendorId=nonexistent-vendor');
 
       expect(status).toBe(200);
       expect(data.data).toEqual([]);
@@ -160,10 +160,10 @@ describe('E2E: API Gateway → Microservices', () => {
   // ── Cart Service ──────────────────────────────────────
 
   describe('Shopping Cart', () => {
-    it('GET /api/v1/cart?userId=xxx — should return empty cart for new user', async () => {
+    it('GET /v1/cart?userId=xxx — should return empty cart for new user', async () => {
       const { status, data } = await apiRequest(
         'GET',
-        `/api/v1/cart?userId=${userId}`,
+        `/v1/cart?userId=${userId}`,
         undefined,
         { Authorization: `Bearer ${accessToken}` },
       );
@@ -172,10 +172,10 @@ describe('E2E: API Gateway → Microservices', () => {
       expect(data.items).toEqual([]);
     });
 
-    it('POST /api/v1/cart/items — should add item to cart', async () => {
+    it('POST /v1/cart/items — should add item to cart', async () => {
       const { status, data } = await apiRequest(
         'POST',
-        '/api/v1/cart/items',
+        '/v1/cart/items',
         {
           userId,
           productId: 'test-product-1',
@@ -191,10 +191,10 @@ describe('E2E: API Gateway → Microservices', () => {
       expect(data.items[0].quantity).toBe(2);
     });
 
-    it('POST /api/v1/cart/items — should increment quantity for duplicate product', async () => {
+    it('POST /v1/cart/items — should increment quantity for duplicate product', async () => {
       const { status, data } = await apiRequest(
         'POST',
-        '/api/v1/cart/items',
+        '/v1/cart/items',
         {
           userId,
           productId: 'test-product-1',
@@ -208,10 +208,10 @@ describe('E2E: API Gateway → Microservices', () => {
       expect(data.items[0].quantity).toBe(5); // 2 + 3
     });
 
-    it('DELETE /api/v1/cart/items/:productId — should remove item', async () => {
+    it('DELETE /v1/cart/items/:productId — should remove item', async () => {
       const { status, data } = await apiRequest(
         'DELETE',
-        `/api/v1/cart/items/test-product-1?userId=${userId}`,
+        `/v1/cart/items/test-product-1?userId=${userId}`,
         undefined,
         { Authorization: `Bearer ${accessToken}` },
       );
@@ -220,10 +220,10 @@ describe('E2E: API Gateway → Microservices', () => {
       expect(data.items).toHaveLength(0);
     });
 
-    it('GET /api/v1/cart — should return 400 without userId', async () => {
+    it('GET /v1/cart — should return 400 without userId', async () => {
       const { status, data } = await apiRequest(
         'GET',
-        '/api/v1/cart',
+        '/v1/cart',
         undefined,
         { Authorization: `Bearer ${accessToken}` },
       );
@@ -236,10 +236,10 @@ describe('E2E: API Gateway → Microservices', () => {
   // ── Inventory Service ─────────────────────────────────
 
   describe('Inventory', () => {
-    it('GET /api/v1/inventory/:productId — should return 404 for non-existent product', async () => {
+    it('GET /v1/inventory/:productId — should return 404 for non-existent product', async () => {
       const { status } = await apiRequest(
         'GET',
-        '/api/v1/inventory/nonexistent-product',
+        '/v1/inventory/nonexistent-product',
         undefined,
         { Authorization: `Bearer ${accessToken}` },
       );
@@ -247,10 +247,10 @@ describe('E2E: API Gateway → Microservices', () => {
       expect(status).toBe(404);
     });
 
-    it('POST /api/v1/inventory/reserve — should return 404 for non-existent inventory', async () => {
+    it('POST /v1/inventory/reserve — should return 404 for non-existent inventory', async () => {
       const { status } = await apiRequest(
         'POST',
-        '/api/v1/inventory/reserve',
+        '/v1/inventory/reserve',
         {
           productId: 'nonexistent',
           quantity: 1,
@@ -266,10 +266,10 @@ describe('E2E: API Gateway → Microservices', () => {
   // ── Order Service ─────────────────────────────────────
 
   describe('Orders', () => {
-    it('GET /api/v1/orders — should require userId or vendorId', async () => {
+    it('GET /v1/orders — should require userId or vendorId', async () => {
       const { status, data } = await apiRequest(
         'GET',
-        '/api/v1/orders',
+        '/v1/orders',
         undefined,
         { Authorization: `Bearer ${accessToken}` },
       );
@@ -278,10 +278,10 @@ describe('E2E: API Gateway → Microservices', () => {
       expect(data.error).toContain('userId or vendorId');
     });
 
-    it('GET /api/v1/orders?userId=xxx — should return empty array for new user', async () => {
+    it('GET /v1/orders?userId=xxx — should return empty array for new user', async () => {
       const { status, data } = await apiRequest(
         'GET',
-        `/api/v1/orders?userId=${userId}`,
+        `/v1/orders?userId=${userId}`,
         undefined,
         { Authorization: `Bearer ${accessToken}` },
       );
@@ -290,10 +290,10 @@ describe('E2E: API Gateway → Microservices', () => {
       expect(Array.isArray(data)).toBe(true);
     });
 
-    it('GET /api/v1/orders/:id — should return 404 for non-existent order', async () => {
+    it('GET /v1/orders/:id — should return 404 for non-existent order', async () => {
       const { status } = await apiRequest(
         'GET',
-        '/api/v1/orders/nonexistent-order-id',
+        '/v1/orders/nonexistent-order-id',
         undefined,
         { Authorization: `Bearer ${accessToken}` },
       );
