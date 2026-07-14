@@ -75,6 +75,8 @@ export function useOrderSync(): UseOrderSyncReturn {
     const gatewayUrl = new URL(apiUrl, baseUrl).origin;
 
     const socket = io(`${gatewayUrl}/ws/v1`, {
+      // Add this specific line to force the HTTP routing through your Ingress
+      path: '/ws/socket.io/',
       auth: { token },
       transports: ['websocket'],
       reconnection: true,
