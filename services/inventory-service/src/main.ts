@@ -10,7 +10,7 @@ async function bootstrap() {
   // Enables PrismaService.onModuleDestroy() on SIGTERM/SIGINT
   app.enableShutdownHooks();
 
-
+  app.setGlobalPrefix('v1');
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
   );

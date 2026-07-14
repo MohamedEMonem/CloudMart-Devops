@@ -9,8 +9,8 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 // Routes
-app.use('/health', healthRouter);
-app.use('/cart', cartRouter);
+app.use('/v1/health', healthRouter);
+app.use('/v1/cart', cartRouter);
 
 // Start server
 async function bootstrap() {
