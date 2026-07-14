@@ -19,7 +19,7 @@ COPY --from=builder /app/prisma ./prisma
 EXPOSE 3000
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=30s \
-  CMD wget --quiet --tries=1 --spider http://localhost:3000/v1/health || exit 1
+  CMD wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1
 
 CMD ["sh", "-c", "\
   for i in 1 2 3 4 5; do \
